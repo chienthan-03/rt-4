@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meme Sound Inserter — Tự động chèn meme vào video</title>
+  <meta name="description" content="Upload video ngắn, AI tự động phân tích và chèn meme sound effects vào đúng khoảnh khắc phù hợp.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <div class="container">
+    <header class="hero">
+      <div class="badge">✨ AI-Powered</div>
+      <h1>Meme Sound <span class="gradient-text">Inserter</span></h1>
+      <p class="hero-sub">Upload video ngắn — AI tự động phát hiện khoảnh khắc hay và chèn meme sound effects cực chill 🎵</p>
+    </header>
+
+    <!-- Upload zone -->
+    <div class="card upload-card" id="uploadCard">
+      <div class="upload-zone" id="uploadZone">
+        <div class="upload-icon-wrap">
+          <span class="upload-icon">🎬</span>
+        </div>
+        <p class="upload-title">Kéo & thả video vào đây</p>
+        <p class="upload-hint">hoặc <label for="fileInput" class="link">chọn file từ máy tính</label></p>
+        <p class="upload-meta">MP4 · MOV · WebM — tối đa 500MB · dưới 3 phút</p>
+        <input type="file" id="fileInput" accept="video/*" hidden>
+      </div>
+    </div>
+
+    <!-- Processing status -->
+    <div class="card status-card" id="statusCard" style="display:none">
+      <div class="status-header">
+        <div class="spinner"></div>
+        <span class="status-label" id="statusLabel">Đang xử lý…</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+      <div class="steps-grid" id="stepsGrid">
+        <div class="step" id="step-extracting">🎬 Trích xuất audio</div>
+        <div class="step" id="step-transcribing">🎤 Nhận dạng giọng nói</div>
+        <div class="step" id="step-analyzing_signals">📊 Phân tích tín hiệu</div>
+        <div class="step" id="step-detecting_highlights">🔍 Phát hiện highlight</div>
+        <div class="step" id="step-selecting_sounds">🎵 Chọn meme sounds</div>
+        <div class="step" id="step-placing_sounds">⏱️ Tính thời điểm chèn</div>
+        <div class="step" id="step-rendering">🎞️ Render video</div>
+      </div>
+    </div>
+
+    <!-- Result -->
+    <div class="card result-card" id="resultCard" style="display:none">
+      <div class="result-icon">🎉</div>
+      <h2 class="result-title">Video đã sẵn sàng!</h2>
+      <p class="result-sub" id="resultSub">AI đã chèn meme sounds vào video của bạn.</p>
+      <a class="download-btn" id="downloadBtn" href="#">
+        <span>⬇️</span> Tải video về
+      </a>
+      <button class="reset-btn" id="resetBtn">Upload video khác</button>
+    </div>
+
+    <!-- Error -->
+    <div class="card error-card" id="errorCard" style="display:none">
+      <div class="error-icon">⚠️</div>
+      <p class="error-msg" id="errorMsg">Có lỗi xảy ra</p>
+      <button class="reset-btn" id="errorResetBtn">Thử lại</button>
+    </div>
+
+    <footer class="footer">
+      <p>Powered by Whisper · Gemini Flash · ChromaDB · ffmpeg</p>
+    </footer>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
