@@ -1,0 +1,5 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
+  "summary":  "Full implementation plan for a meme sound auto-inserter web app. The system takes a short-form video (< 3 min), detects highlight moments using signal aggregation (transcript, audio peaks, facial expressions), selects appropriate meme sounds from a MyInstants-sourced library via ChromaDB semantic search + LLM re-ranking, places sounds at precise timestamps, and renders the final video with ffmpeg. Stack: FastAPI + Celery + Redis backend, Whisper + Gemini Flash via OpenRouter, librosa + mediapipe for signal extraction, ChromaDB + SQLite for sound library, Vanilla JS frontend.",
+  "updatedAt":  "2026-06-08T09:56:24.830822800Z"
+}

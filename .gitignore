@@ -1,0 +1,6 @@
+sounds/
+uploads/
+outputs/
+.env
+*.db
+chroma_db/
