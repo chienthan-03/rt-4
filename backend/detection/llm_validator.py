@@ -1,6 +1,7 @@
 import json
 from openai import OpenAI
 from backend.config import settings
+from backend.llm_json import parse_llm_json
 from backend.detection.highlight_detector import Highlight
 
 _client = None
@@ -13,15 +14,6 @@ def get_client():
             base_url=settings.openrouter_base_url
         )
     return _client
-
-def _parse_decisions(raw: str) -> list[dict]:
-    """Parse LLM JSON response, stripping markdown fences if present."""
-    raw = raw.strip()
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-    return json.loads(raw.strip())
 
 def validate_highlights(highlights: list[Highlight]) -> list[Highlight]:
     if not highlights:
@@ -55,10 +47,11 @@ Chỉ trả về JSON array."""
     response = client.chat.completions.create(
         model=settings.llm_model,
         messages=[{"role": "user", "content": prompt}],
-        temperature=0.1
+        temperature=0.1,
+        max_tokens=2048,
     )
-    raw = response.choices[0].message.content.strip()
-    decisions = _parse_decisions(raw)
+    raw = response.choices[0].message.content or ""
+    decisions = parse_llm_json(raw)
     result = []
     for d in decisions:
         if d.get("keep"):

@@ -1,6 +1,11 @@
+import sys
+from pathlib import Path
+
 import pytest
 import numpy as np
 from moviepy.editor import ColorClip, AudioClip
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 @pytest.fixture(scope="session")
 def sample_video_path(tmp_path_factory):

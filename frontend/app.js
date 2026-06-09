@@ -128,7 +128,12 @@ function pollStatus(taskId, jobId) {
           statusCard.style.display = 'none';
           resultCard.style.display = 'block';
           const soundsAdded = data.result?.sounds_added ?? 0;
-          resultSub.textContent = `AI đã chèn ${soundsAdded} meme sound${soundsAdded !== 1 ? 's' : ''} vào video của bạn. 🎉`;
+          const uniqueSounds = data.result?.unique_sounds ?? soundsAdded;
+          let msg = `AI đã chèn ${soundsAdded} lần (${uniqueSounds} loại sound khác nhau) vào video. 🎉`;
+          if (data.result?.transcript_note) {
+            msg += ` (${data.result.transcript_note})`;
+          }
+          resultSub.textContent = msg;
           downloadBtn.href = `/download/${jobId}`;
         }, 600);
       } else if (data.status === 'FAILURE') {

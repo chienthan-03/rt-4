@@ -4,27 +4,53 @@ from pathlib import Path
 
 def build_ffmpeg_filter(placements: list[dict], original_duration_s: float) -> tuple[str, list[str]]:
     """Build ffmpeg filter_complex string for mixing sound effects."""
+    if not placements:
+        return "[0:a]anull[aout]", []
+
     inputs = []
     filter_parts = []
-    amix_inputs = ["[0:a]"]
+    sfx_labels = []
 
     for i, p in enumerate(placements):
         idx = i + 1
-        offset_s = p["insert_ms"] / 1000.0
         volume = p["volume"]
         fade_out_s = p["fade_out_ms"] / 1000.0
 
         inputs.extend(["-i", p["sound_file"]])
 
-        fade_part = f",afade=t=out:st={offset_s + original_duration_s - fade_out_s}:d={fade_out_s}" if fade_out_s > 0 else ""
+        fade_part = (
+            f",afade=t=out:st={max(0, original_duration_s - fade_out_s)}:d={fade_out_s}"
+            if fade_out_s > 0
+            else ""
+        )
         filter_parts.append(
             f"[{idx}:a]volume={volume},adelay={p['insert_ms']}|{p['insert_ms']},"
             f"apad=whole_dur={original_duration_s}{fade_part}[sfx{i}]"
         )
-        amix_inputs.append(f"[sfx{i}]")
+        sfx_labels.append(f"[sfx{i}]")
 
-    mix = "".join(f"{part};" for part in filter_parts)
-    mix += f"{''.join(amix_inputs)}amix=inputs={len(amix_inputs)}:duration=first:normalize=0[aout]"
+    n = len(placements)
+    sfx_chain = ";".join(filter_parts)
+
+    if n == 1:
+        mix = (
+            f"{sfx_chain};"
+            f"[0:a][sfx0]amix=inputs=2:duration=first:dropout_transition=0:"
+            f"normalize=0:weights=1 1,volume=2[aout]"
+        )
+        return mix, inputs
+
+    # Mix SFX on a separate bus (amix divides by N — compensate with volume=N),
+    # then overlay on the original track without ducking the main audio.
+    sfx_bus = (
+        f"{''.join(sfx_labels)}amix=inputs={n}:duration=longest:dropout_transition=0:"
+        f"normalize=0,volume={n}[sfxall]"
+    )
+    mix = (
+        f"{sfx_chain};{sfx_bus};"
+        f"[0:a][sfxall]amix=inputs=2:duration=first:dropout_transition=0:"
+        f"normalize=0:weights=1 1,volume=2[aout]"
+    )
     return mix, inputs
 
 

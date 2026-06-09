@@ -18,7 +18,11 @@ def index():
 
 @app.post("/upload")
 async def upload_video(file: UploadFile = File(...)):
-    if not file.content_type or not file.content_type.startswith("video/"):
+    is_video_type = file.content_type and file.content_type.startswith("video/")
+    is_video_name = file.filename and Path(file.filename).suffix.lower() in {
+        ".mp4", ".mov", ".webm", ".mkv", ".avi", ".m4v"
+    }
+    if not is_video_type and not is_video_name:
         raise HTTPException(400, "File must be a video")
 
     job_id = str(uuid.uuid4())

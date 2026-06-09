@@ -1,6 +1,6 @@
-import json
 from openai import OpenAI
 from backend.config import settings
+from backend.llm_json import parse_llm_json
 
 # Initialize client lazily to avoid crash if API key is not yet set
 _client = None
@@ -32,21 +32,14 @@ Phân tích và trả về JSON với các trường sau:
 
 Chỉ trả về JSON, không giải thích."""
 
-def parse_tag_response(raw: str) -> dict:
-    raw = raw.strip()
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-    return json.loads(raw.strip())
-
 def tag_sound(name: str, duration_ms: int) -> dict:
     client = get_client()
     prompt = build_tag_prompt(name, duration_ms)
     response = client.chat.completions.create(
         model=settings.llm_model,
         messages=[{"role": "user", "content": prompt}],
-        temperature=0.2
+        temperature=0.2,
+        max_tokens=512,
     )
-    raw = response.choices[0].message.content
-    return parse_tag_response(raw)
+    raw = response.choices[0].message.content or ""
+    return parse_llm_json(raw)

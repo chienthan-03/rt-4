@@ -8,8 +8,8 @@ def test_build_tag_prompt():
     assert "emotion" in prompt
 
 def test_parse_tag_response():
-    from backend.sound.tagger import parse_tag_response
+    from backend.llm_json import parse_llm_json
     raw = '{"emotion": "shock", "intensity": 0.9, "timing_type": "instant", "tags": ["impact"], "event_types": ["fall"], "description": "short boom"}'
-    result = parse_tag_response(raw)
+    result = parse_llm_json(raw)
     assert result["emotion"] == "shock"
     assert result["intensity"] == 0.9

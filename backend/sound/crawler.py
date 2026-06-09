@@ -1,3 +1,4 @@
+import re
 import requests
 from bs4 import BeautifulSoup
 from pathlib import Path
@@ -11,11 +12,21 @@ def parse_sounds_from_html(html: str, base_url: str = BASE_URL) -> list[dict]:
     sounds = []
     for instant in soup.select(".instant"):
         name_tag = instant.select_one(".instant-link")
-        btn = instant.select_one("[data-url]")
-        if not name_tag or not btn:
+        if not name_tag:
             continue
         name = name_tag.get_text(strip=True)
-        mp3_url = btn.get("data-url", "")
+        mp3_url = ""
+        data_btn = instant.select_one("[data-url]")
+        if data_btn:
+            mp3_url = data_btn.get("data-url", "")
+        else:
+            play_btn = instant.select_one("button.small-button[onclick]")
+            if play_btn:
+                match = re.search(r"play\('([^']+)'", play_btn.get("onclick", ""))
+                if match:
+                    mp3_url = match.group(1)
+        if not mp3_url:
+            continue
         if mp3_url and not mp3_url.startswith("http"):
             mp3_url = base_url + mp3_url
         page_url = name_tag.get("href", "")

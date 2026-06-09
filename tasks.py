@@ -22,6 +22,7 @@ def process_video(self, video_path: str, job_id: str):
         raw_transcript = transcribe(wav_path)
         segments = parse_whisper_segments(raw_transcript)
         transcript_events = extract_transcript_events(segments)
+        transcript_skipped = raw_transcript.get("skipped", False)
 
         self.update_state(state="PROGRESS", meta={"step": "analyzing_signals"})
         from backend.signals.audio_signals import extract_audio_events
@@ -40,8 +41,8 @@ def process_video(self, video_path: str, job_id: str):
         highlights = validate_highlights(raw_highlights)
 
         self.update_state(state="PROGRESS", meta={"step": "selecting_sounds"})
-        from backend.sound.selector import select_sound
-        sound_selections = [select_sound(h) for h in highlights]
+        from backend.sound.selector import select_sounds
+        sound_selections = select_sounds(highlights)
 
         self.update_state(state="PROGRESS", meta={"step": "placing_sounds"})
         from backend.placement.placer import create_placements
@@ -54,7 +55,26 @@ def process_video(self, video_path: str, job_id: str):
         render_video(video_path, placements, output_path)
 
         shutil.rmtree(work_dir, ignore_errors=True)
-        return {"status": "done", "output": output_path, "sounds_added": len(placements)}
+        unique_sounds = len({
+            s["chosen_id"]
+            for s in sound_selections
+            if s and s.get("chosen_id")
+        })
+        result = {
+            "status": "done",
+            "output": output_path,
+            "sounds_added": len(placements),
+            "unique_sounds": unique_sounds,
+            "highlights_detected": len(raw_highlights),
+            "highlights_kept": len(highlights),
+        }
+        if transcript_skipped:
+            result["transcript_skipped"] = True
+            result["transcript_note"] = (
+                "Bỏ qua nhận dạng giọng nói (OpenRouter audio cần >= $0.50 credit). "
+                "Vẫn dùng tín hiệu âm thanh/hình ảnh để chèn sound."
+            )
+        return result
 
     except Exception as e:
         shutil.rmtree(work_dir, ignore_errors=True)

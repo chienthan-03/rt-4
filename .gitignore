@@ -4,3 +4,4 @@ outputs/
 .env
 *.db
 chroma_db/
+.venv/

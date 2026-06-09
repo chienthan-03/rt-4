@@ -13,3 +13,15 @@ def test_parse_sounds_from_html():
     assert len(sounds) == 1
     assert sounds[0]["name"] == "Vine Boom"
     assert "vine-boom.mp3" in sounds[0]["mp3_url"]
+
+def test_parse_sounds_from_onclick_html():
+    html = """
+    <div class="instant">
+      <button class="small-button" onclick="play('/media/sounds/vine-boom.mp3', 'loader', 'slug')"></button>
+      <a class="instant-link" href="/en/instant/vine-boom-sound/">VINE BOOM SOUND</a>
+    </div>
+    """
+    sounds = parse_sounds_from_html(html, base_url="https://www.myinstants.com")
+    assert len(sounds) == 1
+    assert sounds[0]["name"] == "VINE BOOM SOUND"
+    assert sounds[0]["mp3_url"] == "https://www.myinstants.com/media/sounds/vine-boom.mp3"

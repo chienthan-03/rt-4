@@ -23,10 +23,12 @@ def test_build_ffmpeg_filter_multiple_placements():
     assert inputs.count("-i") == 2
     assert "sfx0" in filter_str
     assert "sfx1" in filter_str
-    assert "inputs=3" in filter_str  # [0:a] + sfx0 + sfx1
+    assert "amix=inputs=2:duration=longest" in filter_str
+    assert "volume=2[sfxall]" in filter_str
+    assert "[0:a][sfxall]amix=inputs=2" in filter_str
 
 def test_build_ffmpeg_filter_empty_placements():
     from backend.render.renderer import build_ffmpeg_filter
     filter_str, inputs = build_ffmpeg_filter([], original_duration_s=10.0)
     assert inputs == []
-    assert "amix=inputs=1" in filter_str  # just [0:a]
+    assert "[0:a]anull[aout]" in filter_str
