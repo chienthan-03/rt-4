@@ -45,13 +45,14 @@ def test_select_sounds_avoids_repeats():
         {"id": "sound-b", "metadata": {"name": "metal_pipe", "emotion": "fail"}},
     ]
 
-    with patch("backend.sound.selector.search_sounds", return_value=candidates):
-        with patch("backend.sound.selector.llm_rerank") as mock_rerank:
-            mock_rerank.side_effect = [
-                {"chosen_id": "sound-a", "reason": "first"},
-                {"chosen_id": "sound-a", "reason": "repeat"},
-            ]
-            selections = select_sounds(highlights)
+    with patch("backend.sound.selector._try_reaction_map", return_value=None):
+        with patch("backend.sound.selector.search_sounds", return_value=candidates):
+            with patch("backend.sound.selector.llm_rerank") as mock_rerank:
+                mock_rerank.side_effect = [
+                    {"chosen_id": "sound-a", "reason": "first"},
+                    {"chosen_id": "sound-a", "reason": "repeat"},
+                ]
+                selections = select_sounds(highlights)
 
     assert selections[0]["chosen_id"] == "sound-a"
     assert selections[1]["chosen_id"] == "sound-b"

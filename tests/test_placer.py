@@ -41,3 +41,20 @@ def test_create_placements_skips_missing_sound_file():
     placements = create_placements(highlights, selections)
     assert placements == []
 
+
+def test_anticipation_offset_applied(tmp_path):
+    sound_file = tmp_path / "test.mp3"
+    sound_file.write_bytes(b"ID3")
+    h = Highlight(start_ms=0, end_ms=2000, peak_ms=1000, score=0.9, impact_score=64)
+    sel = {
+        "chosen_id": "x",
+        "metadata": {
+            "file_path": str(sound_file),
+            "duration_ms": 1000,
+            "timing_type": "instant",
+        },
+    }
+    placements = create_placements([h], [sel], anticipation_ms=200)
+    expected = calculate_insert_ms(1000, 1000, "instant") - 200
+    assert placements[0]["insert_ms"] == expected
+

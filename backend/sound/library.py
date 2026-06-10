@@ -52,7 +52,7 @@ def resolve_fallback_sound(emotion: str, db_path: str | None = None) -> dict | N
     return None
 
 
-def sound_to_selection(sound: dict) -> dict:
+def sound_to_selection(sound: dict, reason: str = "fallback") -> dict:
     return {
         "chosen_id": sound["id"],
         "metadata": {
@@ -60,10 +60,11 @@ def sound_to_selection(sound: dict) -> dict:
             "emotion": sound.get("emotion"),
             "intensity": float(sound.get("intensity") or 0.5),
             "timing_type": sound.get("timing_type") or "instant",
+            "tier": sound.get("tier") or "emphasis",
             "file_path": sound.get("file_path"),
             "duration_ms": sound.get("duration_ms"),
         },
-        "reason": "fallback",
+        "reason": reason,
     }
 
 
@@ -94,8 +95,9 @@ def add_sound_to_library(name: str, file_path: str, source_url: str, tag_data: d
         "emotion": tag_data.get("emotion") or "",
         "intensity": float(tag_data.get("intensity") or 0.5),
         "timing_type": tag_data.get("timing_type") or "instant",
+        "tier": tag_data.get("tier") or "emphasis",
         "name": name,
         "file_path": file_path,
-        "duration_ms": duration_ms
+        "duration_ms": duration_ms,
     })
     return sound_id

@@ -1,7 +1,5 @@
 const uploadZone = document.getElementById('uploadZone');
 const fileInput = document.getElementById('fileInput');
-const volumeSlider = document.getElementById('memeVolumeSlider');
-const volumeLabel = document.getElementById('memeVolumeLabel');
 const uploadCard = document.getElementById('uploadCard');
 const statusCard = document.getElementById('statusCard');
 const statusLabel = document.getElementById('statusLabel');
@@ -32,11 +30,21 @@ const STEP_LABELS = {
   rendering:           '🎞️ Đang render video cuối cùng…',
 };
 
-volumeSlider.addEventListener('input', (e) => {
-  const value = e.target.value;
-  volumeLabel.textContent = `${value}%`;
-  volumeSlider.setAttribute('aria-valuenow', value);
-});
+const getMemeVolume = () => {
+  if (typeof window.getMemeVolume === 'function') {
+    return window.getMemeVolume();
+  }
+  const slider = document.getElementById('memeVolumeSlider');
+  return slider ? Number(slider.value) / 100 : 0.5;
+};
+
+const getNiche = () => {
+  if (typeof window.getNiche === 'function') {
+    return window.getNiche();
+  }
+  const active = document.querySelector('.niche-option.active');
+  return active?.dataset.niche || 'entertainment';
+};
 
 // Drag-and-drop
 uploadZone.addEventListener('dragover', e => {
@@ -83,7 +91,8 @@ async function handleFile(file) {
 
   const formData = new FormData();
   formData.append('file', file);
-  formData.append('meme_volume', parseFloat(volumeSlider.value) / 100);
+  formData.append('meme_volume', String(getMemeVolume()));
+  formData.append('niche', getNiche());
 
   try {
     const res = await fetch('/upload', { method: 'POST', body: formData });
@@ -138,7 +147,22 @@ function pollStatus(taskId, jobId) {
           resultCard.style.display = 'block';
           const soundsAdded = data.result?.sounds_added ?? 0;
           const uniqueSounds = data.result?.unique_sounds ?? soundsAdded;
-          let msg = `AI đã chèn ${soundsAdded} lần (${uniqueSounds} loại sound khác nhau) vào video. 🎉`;
+          const majorSounds = data.result?.major_sounds;
+          const minorSounds = data.result?.minor_sounds;
+          const nicheLabels = {
+            entertainment: 'giải trí',
+            edu: 'giáo dục',
+            lifestyle: 'lifestyle',
+          };
+          const nicheKey = data.result?.niche || getNiche();
+          const nicheLabel = nicheLabels[nicheKey] || nicheKey;
+          let msg = `AI đã chèn ${soundsAdded} sound (chế độ ${nicheLabel})`;
+          if (majorSounds != null && minorSounds != null) {
+            msg += ` — ${majorSounds} meme chính + ${minorSounds} hiệu ứng nhẹ`;
+          } else {
+            msg += ` — ${uniqueSounds} loại sound khác nhau`;
+          }
+          msg += '. 🎉';
           if (data.result?.transcript_note) {
             msg += ` (${data.result.transcript_note})`;
           }

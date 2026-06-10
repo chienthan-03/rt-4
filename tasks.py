@@ -6,13 +6,20 @@ from pathlib import Path
 app = Celery("meme_inserter", broker=settings.redis_url, backend=settings.redis_url)
 
 @app.task(bind=True)
-def process_video(self, video_path: str, job_id: str, meme_volume: float = 0.85):
+def process_video(
+    self,
+    video_path: str,
+    job_id: str,
+    meme_volume: float = 0.5,
+    niche: str = "entertainment",
+):
     work_dir = f"{settings.uploads_dir}/{job_id}"
     Path(work_dir).mkdir(parents=True, exist_ok=True)
 
     try:
         self.update_state(state="PROGRESS", meta={"step": "extracting"})
-        from backend.ingestion.extractor import extract_audio, extract_frames
+        from backend.ingestion.extractor import extract_audio, extract_frames, get_video_duration_s
+        duration_sec = get_video_duration_s(video_path)
         wav_path = extract_audio(video_path, work_dir)
         frames_dir = f"{work_dir}/frames"
         extract_frames(video_path, frames_dir, fps=1)
@@ -39,14 +46,34 @@ def process_video(self, video_path: str, job_id: str, meme_volume: float = 0.85)
         from backend.detection.llm_validator import validate_highlights
         raw_highlights = detect_highlights(all_events)
         highlights = validate_highlights(raw_highlights)
+        from backend.detection.density import apply_density_cap
+        highlights = apply_density_cap(highlights, duration_sec, niche=niche)
 
         self.update_state(state="PROGRESS", meta={"step": "selecting_sounds"})
         from backend.sound.selector import select_sounds
         sound_selections = select_sounds(highlights)
 
+        from backend.detection.minor_cues import extract_minor_cues
+        from backend.detection.minor_density import max_minor_per_window, plan_minor_density
+        from backend.sound.minor_selector import select_minor_sounds
+        minor_cues: list = []
+        minor_selections: list = []
+        if max_minor_per_window(niche) > 0:
+            minor_cues = extract_minor_cues(visual_events, major_highlights=highlights)
+            minor_cues = plan_minor_density(minor_cues, duration_sec, niche=niche)
+            minor_selections = select_minor_sounds(minor_cues)
+
         self.update_state(state="PROGRESS", meta={"step": "placing_sounds"})
-        from backend.placement.placer import create_placements
-        placements = create_placements(highlights, sound_selections, meme_volume=meme_volume)
+        from backend.placement.placer import (
+            create_minor_placements,
+            create_placements,
+            merge_placements,
+        )
+        major_placements = create_placements(highlights, sound_selections, meme_volume=meme_volume)
+        minor_placements = create_minor_placements(
+            minor_cues, minor_selections, meme_volume=meme_volume
+        )
+        placements = merge_placements(major_placements, minor_placements)
 
         self.update_state(state="PROGRESS", meta={"step": "rendering"})
         from backend.render.renderer import render_video
@@ -60,13 +87,18 @@ def process_video(self, video_path: str, job_id: str, meme_volume: float = 0.85)
             for s in sound_selections
             if s and s.get("chosen_id")
         })
+        minor_count = sum(1 for p in placements if p.get("track") == "minor")
         result = {
             "status": "done",
             "output": output_path,
             "sounds_added": len(placements),
+            "major_sounds": len(major_placements),
+            "minor_sounds": minor_count,
             "unique_sounds": unique_sounds,
             "highlights_detected": len(raw_highlights),
             "highlights_kept": len(highlights),
+            "minor_cues": len(minor_cues),
+            "niche": niche,
         }
         if transcript_skipped:
             result["transcript_skipped"] = True

@@ -7,7 +7,7 @@
   <meta name="description" content="Upload video ngắn, AI tự động phân tích và chèn meme sound effects vào đúng khoảnh khắc phù hợp.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/style.css?v=4">
 </head>
 <body>
   <div class="bg-orbs">
@@ -26,23 +26,129 @@
     <!-- Upload zone -->
     <div class="card upload-card" id="uploadCard">
       <div class="volume-control">
-        <label class="volume-label" for="memeVolumeSlider">
-          🔊 Volume meme sound: <span id="memeVolumeLabel">50%</span>
-        </label>
+        <div class="volume-label-row">
+          <label class="volume-label" for="memeVolumeSlider">🔊 Volume meme sound</label>
+          <output class="volume-value" id="memeVolumeLabel" for="memeVolumeSlider">50%</output>
+        </div>
         <input
           type="range"
           id="memeVolumeSlider"
           class="volume-slider"
           min="0"
           max="100"
+          step="1"
           value="50"
           aria-label="Điều chỉnh volume meme sound"
           aria-valuemin="0"
           aria-valuemax="100"
           aria-valuenow="50"
         >
-        <p class="volume-hint">50% = volume vừa phải · 0% = tắt tiếng meme</p>
+        <p class="volume-hint" id="memeVolumeHint">Volume meme vừa phải — mặc định khuyên dùng</p>
       </div>
+      <div class="niche-control">
+        <div class="niche-label-row">
+          <span class="niche-label" id="nicheLabel">🎯 Loại nội dung</span>
+        </div>
+        <div class="niche-options" id="nicheOptions" role="radiogroup" aria-labelledby="nicheLabel">
+          <button
+            type="button"
+            class="niche-option active"
+            data-niche="entertainment"
+            role="radio"
+            aria-checked="true"
+            tabindex="0"
+          >🎮 Giải trí</button>
+          <button
+            type="button"
+            class="niche-option"
+            data-niche="edu"
+            role="radio"
+            aria-checked="false"
+            tabindex="-1"
+          >📚 Giáo dục</button>
+          <button
+            type="button"
+            class="niche-option"
+            data-niche="lifestyle"
+            role="radio"
+            aria-checked="false"
+            tabindex="-1"
+          >✨ Lifestyle</button>
+        </div>
+        <p class="niche-hint" id="nicheHint">Nhiều meme sound — phù hợp clip hài, reaction, trend</p>
+      </div>
+      <script>
+        (function initMemeVolumeSlider() {
+          var slider = document.getElementById('memeVolumeSlider');
+          var label = document.getElementById('memeVolumeLabel');
+          var hint = document.getElementById('memeVolumeHint');
+          if (!slider || !label) return;
+
+          function getHint(pct) {
+            if (pct === 0) return 'Meme sound sẽ bị tắt hoàn toàn';
+            if (pct <= 25) return 'Volume meme rất nhỏ — phù hợp khi giọng nói đã to';
+            if (pct <= 50) return 'Volume meme vừa phải — mặc định khuyên dùng';
+            if (pct <= 75) return 'Volume meme lớn — meme nổi bật hơn giọng gốc';
+            return 'Volume meme tối đa — meme rất to (100%)';
+          }
+
+          function syncVolumeUI() {
+            var pct = Math.round(Number(slider.value));
+            label.textContent = pct + '%';
+            slider.setAttribute('aria-valuenow', String(pct));
+            slider.style.setProperty('--volume-percent', pct + '%');
+            if (hint) hint.textContent = getHint(pct);
+          }
+
+          slider.addEventListener('input', syncVolumeUI);
+          slider.addEventListener('change', syncVolumeUI);
+          syncVolumeUI();
+
+          window.getMemeVolume = function () {
+            return Number(slider.value) / 100;
+          };
+        })();
+
+        (function initNicheSelector() {
+          var options = document.querySelectorAll('.niche-option');
+          var hint = document.getElementById('nicheHint');
+          if (!options.length) return;
+
+          var hints = {
+            entertainment: 'Meme chính đậm + whoosh nhẹ trên cut rõ (tối đa ~2/10s)',
+            edu: 'Chỉ meme chính ở moment quan trọng — không thêm whoosh/pop',
+            lifestyle: 'Meme vừa phải + tối đa 1 hiệu ứng nhẹ mỗi 10s',
+          };
+
+          var selected = 'entertainment';
+
+          function selectNiche(niche) {
+            selected = niche;
+            options.forEach(function (btn) {
+              var isActive = btn.getAttribute('data-niche') === niche;
+              btn.classList.toggle('active', isActive);
+              btn.setAttribute('aria-checked', isActive ? 'true' : 'false');
+              btn.tabIndex = isActive ? 0 : -1;
+            });
+            if (hint) hint.textContent = hints[niche] || hints.entertainment;
+          }
+
+          options.forEach(function (btn) {
+            btn.addEventListener('click', function () {
+              selectNiche(btn.getAttribute('data-niche'));
+            });
+            btn.addEventListener('keydown', function (e) {
+              if (e.key !== 'Enter' && e.key !== ' ') return;
+              e.preventDefault();
+              selectNiche(btn.getAttribute('data-niche'));
+            });
+          });
+
+          window.getNiche = function () {
+            return selected;
+          };
+        })();
+      </script>
       <div class="upload-zone" id="uploadZone">
         <div class="upload-icon-wrap">
           <span class="upload-icon">🎬</span>
@@ -97,6 +203,6 @@
     </footer>
   </div>
 
-  <script src="/static/app.js"></script>
+  <script src="/static/app.js?v=4"></script>
 </body>
 </html>

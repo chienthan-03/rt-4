@@ -23,6 +23,7 @@ Duration: {duration_ms}ms
 Phân tích và trả về JSON với các trường sau:
 {{
   "emotion": "shock|sadness|hype|fail|awkward|dramatic|funny|cringe|win",
+  "tier": "emphasis|comedy",
   "intensity": 0.0-1.0,
   "timing_type": "instant|buildup|reaction",
   "tags": ["tag1", "tag2"],

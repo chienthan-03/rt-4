@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 import uuid, shutil
 from backend.config import settings
+from backend.detection.niche import DEFAULT_NICHE, normalize_niche
 from tasks import process_video
 
 app = FastAPI(title="Meme Sound Inserter")
@@ -19,10 +20,16 @@ def index():
 @app.post("/upload")
 async def upload_video(
     file: UploadFile = File(...),
-    meme_volume: float = Form(0.5)
+    meme_volume: float = Form(0.5),
+    niche: str = Form(DEFAULT_NICHE),
 ):
     if meme_volume < 0.0 or meme_volume > 2.0:
         raise HTTPException(400, "Meme volume must be between 0.0 and 2.0")
+
+    try:
+        niche = normalize_niche(niche)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
     is_video_type = file.content_type and file.content_type.startswith("video/")
     is_video_name = file.filename and Path(file.filename).suffix.lower() in {
@@ -37,8 +44,8 @@ async def upload_video(
     with open(video_path, "wb") as f:
         shutil.copyfileobj(file.file, f)
 
-    task = process_video.delay(video_path, job_id, meme_volume)
-    return {"job_id": job_id, "task_id": task.id}
+    task = process_video.delay(video_path, job_id, meme_volume, niche)
+    return {"job_id": job_id, "task_id": task.id, "niche": niche}
 
 @app.get("/status/{task_id}")
 def get_status(task_id: str):

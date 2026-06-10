@@ -27,6 +27,13 @@ class Highlight:
     intensity: float = 0.5
     signals: list = field(default_factory=list)
     context_text: str = ""
+    importance: int = 3
+    surprise: int = 3
+    emotion_score: int = 3
+    impact_score: int = 27
+    has_punchline: bool = False
+    audience_emotion: str = ""
+    sfx_tier: str = "emphasis"
 
 def merge_events(events: list[dict], window_ms: int = 2000) -> list[dict]:
     if not events:

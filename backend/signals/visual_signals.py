@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 from pathlib import Path
 
-def extract_scene_change_events(frames_dir: str, threshold: float = 30.0) -> list[dict]:
+def extract_scene_change_events(frames_dir: str, threshold: float = 38.0) -> list[dict]:
     frame_paths = sorted(Path(frames_dir).glob("frame_*.jpg"))
     events = []
     prev_gray = None
