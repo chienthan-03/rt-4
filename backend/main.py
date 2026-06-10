@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
@@ -17,7 +17,13 @@ def index():
     return FileResponse("frontend/index.html")
 
 @app.post("/upload")
-async def upload_video(file: UploadFile = File(...)):
+async def upload_video(
+    file: UploadFile = File(...),
+    meme_volume: float = Form(0.5)
+):
+    if meme_volume < 0.0 or meme_volume > 2.0:
+        raise HTTPException(400, "Meme volume must be between 0.0 and 2.0")
+
     is_video_type = file.content_type and file.content_type.startswith("video/")
     is_video_name = file.filename and Path(file.filename).suffix.lower() in {
         ".mp4", ".mov", ".webm", ".mkv", ".avi", ".m4v"
@@ -31,7 +37,7 @@ async def upload_video(file: UploadFile = File(...)):
     with open(video_path, "wb") as f:
         shutil.copyfileobj(file.file, f)
 
-    task = process_video.delay(video_path, job_id)
+    task = process_video.delay(video_path, job_id, meme_volume)
     return {"job_id": job_id, "task_id": task.id}
 
 @app.get("/status/{task_id}")
