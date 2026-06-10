@@ -32,7 +32,8 @@ def resolve_overlaps(placements: list[dict], min_gap_ms: int = 500) -> list[dict
 
 def create_placements(
     highlights: list[Highlight],
-    sound_selections: list[dict]
+    sound_selections: list[dict],
+    meme_volume: float = 0.85
 ) -> list[dict]:
     placements = []
     for h, sel in zip(highlights, sound_selections):
@@ -50,7 +51,7 @@ def create_placements(
             "sound_file": file_path,
             "insert_ms": insert_ms,
             "end_ms": insert_ms + duration_ms,
-            "volume": 0.85,
+            "volume": meme_volume,
             "fade_in_ms": 0,
             "fade_out_ms": 50,
             "confidence": h.score
