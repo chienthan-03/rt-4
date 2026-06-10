@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from backend.detection.highlight_detector import Highlight
 
 def calculate_insert_ms(
@@ -43,6 +45,8 @@ def create_placements(
         duration_ms = meta.get("duration_ms", 1000)
         timing_type = meta.get("timing_type", "instant")
         file_path = meta.get("file_path", "")
+        if not file_path or not Path(file_path).is_file():
+            continue
 
         insert_ms = calculate_insert_ms(h.peak_ms, duration_ms, timing_type, h.end_ms)
         insert_ms = max(0, insert_ms)

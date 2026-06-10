@@ -4,3 +4,5 @@ outputs/
 *.db
 chroma_db/
 .venv/
+__pycache__/
+*.py[cod]

@@ -18,10 +18,26 @@ def test_resolve_overlaps_keeps_higher_confidence():
     assert len(resolved) == 1
     assert resolved[0]["sound_file"] == "b.mp3"
 
-def test_create_placements_custom_volume():
+def test_create_placements_custom_volume(tmp_path):
+    sound_file = tmp_path / "test.mp3"
+    sound_file.write_bytes(b"ID3")
     highlights = [Highlight(start_ms=1000, end_ms=2000, peak_ms=1500, score=0.8)]
-    selections = [{"chosen_id": "sound1", "metadata": {"duration_ms": 1000, "timing_type": "instant", "file_path": "test.mp3"}}]
+    selections = [{
+        "chosen_id": "sound1",
+        "metadata": {
+            "duration_ms": 1000,
+            "timing_type": "instant",
+            "file_path": str(sound_file),
+        },
+    }]
     placements = create_placements(highlights, selections, meme_volume=0.45)
     assert len(placements) == 1
     assert placements[0]["volume"] == 0.45
+
+
+def test_create_placements_skips_missing_sound_file():
+    highlights = [Highlight(start_ms=1000, end_ms=2000, peak_ms=1500, score=0.8)]
+    selections = [{"chosen_id": "sound1", "metadata": {"duration_ms": 1000, "file_path": "missing.mp3"}}]
+    placements = create_placements(highlights, selections)
+    assert placements == []
 
