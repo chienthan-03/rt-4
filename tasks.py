@@ -6,7 +6,7 @@ from pathlib import Path
 app = Celery("meme_inserter", broker=settings.redis_url, backend=settings.redis_url)
 
 @app.task(bind=True)
-def process_video(self, video_path: str, job_id: str):
+def process_video(self, video_path: str, job_id: str, meme_volume: float = 0.85):
     work_dir = f"{settings.uploads_dir}/{job_id}"
     Path(work_dir).mkdir(parents=True, exist_ok=True)
 
@@ -46,7 +46,7 @@ def process_video(self, video_path: str, job_id: str):
 
         self.update_state(state="PROGRESS", meta={"step": "placing_sounds"})
         from backend.placement.placer import create_placements
-        placements = create_placements(highlights, sound_selections)
+        placements = create_placements(highlights, sound_selections, meme_volume=meme_volume)
 
         self.update_state(state="PROGRESS", meta={"step": "rendering"})
         from backend.render.renderer import render_video
