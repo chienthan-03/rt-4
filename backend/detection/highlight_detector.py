@@ -4,8 +4,16 @@ EMOTION_MAP = {
     "speech_keyword": "shock",
     "audio_spike": "shock",
     "silence_break": "dramatic",
-    "scene_change": "neutral",
-    "face_detected": "neutral"
+    "scene_change": "awkward",
+    "face_detected": "funny",
+}
+
+EVENT_TYPE_MAP = {
+    "speech_keyword": "shock",
+    "audio_spike": "shock",
+    "silence_break": "dramatic",
+    "scene_change": "generic",
+    "face_detected": "funny",
 }
 
 @dataclass
@@ -47,15 +55,26 @@ def merge_events(events: list[dict], window_ms: int = 2000) -> list[dict]:
         })
     return merged
 
+def _primary_signal(signals: list[str]) -> str:
+    priority = ["speech_keyword", "audio_spike", "silence_break", "face_detected", "scene_change"]
+    for signal in priority:
+        if signal in signals:
+            return signal
+    return signals[0] if signals else "audio_spike"
+
+
 def score_to_highlight(merged_event: dict) -> Highlight:
+    primary = _primary_signal(merged_event["signals"])
     return Highlight(
         start_ms=merged_event["timestamp_ms"],
         end_ms=merged_event["end_ms"],
         peak_ms=merged_event["peak_ms"],
         score=merged_event["score"],
+        event_type=EVENT_TYPE_MAP.get(primary, "generic"),
+        emotion=EMOTION_MAP.get(primary, "shock"),
         intensity=merged_event["score"],
         signals=merged_event["signals"],
-        context_text=merged_event["context_text"]
+        context_text=merged_event["context_text"],
     )
 
 def detect_highlights(all_events: list[dict], threshold: float = 0.5) -> list[Highlight]:

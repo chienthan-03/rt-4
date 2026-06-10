@@ -14,9 +14,12 @@ def test_build_search_query():
     assert "fail" in q
     assert "shock" in q
 
-def test_fallback_rule_returns_something():
+def test_fallback_rule_returns_resolved_sound():
     result = apply_fallback_rule("shock")
     assert result is not None
+    assert result.get("chosen_id")
+    assert result["metadata"].get("file_path")
+    assert "vine" in result["metadata"]["file_path"].lower()
 
 def test_filter_fresh_candidates_prefers_unused():
     candidates = [

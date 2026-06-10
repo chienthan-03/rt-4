@@ -6,6 +6,7 @@ from backend.config import settings
 from backend.llm_json import parse_llm_json
 from backend.db.chroma import search_sounds
 from backend.detection.highlight_detector import Highlight
+from backend.sound.library import resolve_fallback_sound, sound_to_selection
 
 logger = logging.getLogger(__name__)
 _client = None
@@ -19,23 +20,14 @@ def get_client():
         )
     return _client
 
-FALLBACK_RULES = {
-    "shock": "vine_boom",
-    "fail": "metal_pipe",
-    "sadness": "sad_violin",
-    "hype": "crowd_cheer",
-    "awkward": "bruh",
-    "dramatic": "sad_violin",
-}
-
 def build_search_query(highlight: Highlight) -> str:
     return f"{highlight.event_type} {highlight.emotion} intensity={highlight.intensity:.1f}"
 
 def apply_fallback_rule(emotion: str) -> dict | None:
-    sound_name = FALLBACK_RULES.get(emotion)
-    if not sound_name:
+    sound = resolve_fallback_sound(emotion)
+    if not sound:
         return None
-    return {"name": sound_name, "fallback": True}
+    return sound_to_selection(sound)
 
 def _filter_fresh_candidates(
     candidates: list[dict],
