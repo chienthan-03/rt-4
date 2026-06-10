@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from backend.detection.highlight_detector import Highlight
 
 def calculate_insert_ms(
@@ -32,7 +34,8 @@ def resolve_overlaps(placements: list[dict], min_gap_ms: int = 500) -> list[dict
 
 def create_placements(
     highlights: list[Highlight],
-    sound_selections: list[dict]
+    sound_selections: list[dict],
+    meme_volume: float = 0.85
 ) -> list[dict]:
     placements = []
     for h, sel in zip(highlights, sound_selections):
@@ -42,6 +45,8 @@ def create_placements(
         duration_ms = meta.get("duration_ms", 1000)
         timing_type = meta.get("timing_type", "instant")
         file_path = meta.get("file_path", "")
+        if not file_path or not Path(file_path).is_file():
+            continue
 
         insert_ms = calculate_insert_ms(h.peak_ms, duration_ms, timing_type, h.end_ms)
         insert_ms = max(0, insert_ms)
@@ -50,7 +55,7 @@ def create_placements(
             "sound_file": file_path,
             "insert_ms": insert_ms,
             "end_ms": insert_ms + duration_ms,
-            "volume": 0.85,
+            "volume": meme_volume,
             "fade_in_ms": 0,
             "fade_out_ms": 50,
             "confidence": h.score

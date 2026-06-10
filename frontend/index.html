@@ -25,6 +25,24 @@
 
     <!-- Upload zone -->
     <div class="card upload-card" id="uploadCard">
+      <div class="volume-control">
+        <label class="volume-label" for="memeVolumeSlider">
+          🔊 Volume meme sound: <span id="memeVolumeLabel">50%</span>
+        </label>
+        <input
+          type="range"
+          id="memeVolumeSlider"
+          class="volume-slider"
+          min="0"
+          max="100"
+          value="50"
+          aria-label="Điều chỉnh volume meme sound"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="50"
+        >
+        <p class="volume-hint">50% = volume vừa phải · 0% = tắt tiếng meme</p>
+      </div>
       <div class="upload-zone" id="uploadZone">
         <div class="upload-icon-wrap">
           <span class="upload-icon">🎬</span>

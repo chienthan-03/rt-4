@@ -1,5 +1,6 @@
-import sqlite3
 import json
+import sqlite3
+from pathlib import Path
 from typing import Optional
 
 def init_db(db_path: str):
@@ -49,6 +50,21 @@ def get_sounds(db_path: str) -> list[dict]:
     rows = conn.execute("SELECT * FROM sounds").fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+def find_sound_by_name(db_path: str, name: str) -> Optional[dict]:
+    sounds = get_sounds(db_path)
+    if not sounds:
+        return None
+
+    needle = name.lower().replace("_", " ").replace("-", " ")
+    for sound in sounds:
+        haystack = f"{sound['name']} {Path(sound['file_path']).stem}".lower()
+        haystack = haystack.replace("_", " ").replace("-", " ")
+        if needle in haystack:
+            return sound
+
+    return sounds[0]
 
 def update_sound_stats(db_path: str, sound_id: str, accepted: bool):
     conn = sqlite3.connect(db_path)

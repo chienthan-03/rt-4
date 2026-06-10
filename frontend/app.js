@@ -1,5 +1,7 @@
 const uploadZone = document.getElementById('uploadZone');
 const fileInput = document.getElementById('fileInput');
+const volumeSlider = document.getElementById('memeVolumeSlider');
+const volumeLabel = document.getElementById('memeVolumeLabel');
 const uploadCard = document.getElementById('uploadCard');
 const statusCard = document.getElementById('statusCard');
 const statusLabel = document.getElementById('statusLabel');
@@ -29,6 +31,12 @@ const STEP_LABELS = {
   placing_sounds:      '⏱️ Đang tính thời điểm chèn…',
   rendering:           '🎞️ Đang render video cuối cùng…',
 };
+
+volumeSlider.addEventListener('input', (e) => {
+  const value = e.target.value;
+  volumeLabel.textContent = `${value}%`;
+  volumeSlider.setAttribute('aria-valuenow', value);
+});
 
 // Drag-and-drop
 uploadZone.addEventListener('dragover', e => {
@@ -75,6 +83,7 @@ async function handleFile(file) {
 
   const formData = new FormData();
   formData.append('file', file);
+  formData.append('meme_volume', parseFloat(volumeSlider.value) / 100);
 
   try {
     const res = await fetch('/upload', { method: 'POST', body: formData });

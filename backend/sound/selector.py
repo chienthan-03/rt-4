@@ -5,6 +5,7 @@ from openai import OpenAI
 from backend.config import settings
 from backend.llm_json import parse_llm_json
 from backend.db.chroma import search_sounds
+from backend.db.models import find_sound_by_name, init_db
 from backend.detection.highlight_detector import Highlight
 from backend.sound.library import resolve_fallback_sound, sound_to_selection
 
@@ -27,7 +28,24 @@ def apply_fallback_rule(emotion: str) -> dict | None:
     sound = resolve_fallback_sound(emotion)
     if not sound:
         return None
-    return sound_to_selection(sound)
+
+    init_db(settings.db_path)
+    sound = find_sound_by_name(settings.db_path, sound_name)
+    if not sound:
+        return None
+
+    return {
+        "chosen_id": sound["id"],
+        "metadata": {
+            "name": sound["name"],
+            "file_path": sound["file_path"],
+            "duration_ms": sound.get("duration_ms") or 1000,
+            "timing_type": sound.get("timing_type") or "instant",
+            "emotion": sound.get("emotion"),
+            "intensity": sound.get("intensity"),
+        },
+        "reason": "fallback_rule",
+    }
 
 def _filter_fresh_candidates(
     candidates: list[dict],
