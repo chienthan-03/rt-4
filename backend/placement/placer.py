@@ -3,7 +3,6 @@ from pathlib import Path
 from backend.detection.highlight_detector import Highlight
 from backend.detection.minor_cues import MinorCue
 
-MINOR_VOLUME_RATIO = 0.35
 MINOR_MIN_GAP_MS = 250
 MAJOR_PRIORITY_BUFFER_MS = 300
 
@@ -81,10 +80,9 @@ def _overlaps_major(minor_insert_ms: int, minor_end_ms: int, major_placements: l
 def create_minor_placements(
     cues: list[MinorCue],
     sound_selections: list[dict],
-    meme_volume: float = 0.5,
+    minor_volume: float = 0.35,
 ) -> list[dict]:
     placements = []
-    minor_volume = meme_volume * MINOR_VOLUME_RATIO
 
     for cue, sel in zip(cues, sound_selections):
         if not sel:
@@ -128,3 +126,75 @@ def merge_placements(
     minors = resolve_overlaps(filtered_minors, min_gap_ms=MINOR_MIN_GAP_MS)
     combined = sorted(major_placements + minors, key=lambda p: p["insert_ms"])
     return combined
+
+def gap_fill_pass(
+    combined_placements: list[dict],
+    fill_selections: list[dict],
+    video_duration_ms: int,
+    min_gap_ms: int = 8000
+) -> list[dict]:
+    if not fill_selections:
+        return []
+        
+    gaps = []
+    last_end = 0
+    for p in combined_placements:
+        gap_duration = p["insert_ms"] - last_end
+        if gap_duration >= min_gap_ms:
+            gaps.append((last_end, p["insert_ms"]))
+        last_end = max(last_end, p["end_ms"])
+        
+    if video_duration_ms - last_end >= min_gap_ms:
+        gaps.append((last_end, video_duration_ms))
+        
+    fill_placements = []
+    fill_idx = 0
+    
+    for start, end in gaps:
+        if fill_idx >= len(fill_selections):
+            break
+        sel = fill_selections[fill_idx]
+        meta = sel.get("metadata") or {}
+        file_path = meta.get("file_path", "")
+        duration_ms = meta.get("duration_ms", 1000)
+        
+        if not file_path or not Path(file_path).is_file():
+            fill_idx += 1
+            continue
+            
+        insert_ms = start + (end - start) // 2 - duration_ms // 2
+        insert_ms = max(start, insert_ms)
+        
+        fill_placements.append({
+            "sound_file": file_path,
+            "insert_ms": insert_ms,
+            "end_ms": insert_ms + duration_ms,
+            "volume": 0.25,
+            "fade_in_ms": 100,
+            "fade_out_ms": 100,
+            "track": "fill"
+        })
+        fill_idx += 1
+        
+    return fill_placements
+
+def create_background_placements(bg_selections: list[dict], video_duration_ms: int) -> list[dict]:
+    placements = []
+    for sel in bg_selections:
+        if not sel:
+            continue
+        meta = sel.get("metadata") or {}
+        file_path = meta.get("file_path", "")
+        if not file_path or not Path(file_path).is_file():
+            continue
+            
+        placements.append({
+            "sound_file": file_path,
+            "insert_ms": 0,
+            "end_ms": video_duration_ms,
+            "volume": 0.15,
+            "fade_in_ms": 1000,
+            "fade_out_ms": 2000,
+            "track": "background"
+        })
+    return placements
