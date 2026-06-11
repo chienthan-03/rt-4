@@ -58,6 +58,7 @@ def sound_to_selection(sound: dict, reason: str = "fallback") -> dict:
         "metadata": {
             "name": sound.get("name"),
             "emotion": sound.get("emotion"),
+            "mood": sound.get("mood"),
             "intensity": float(sound.get("intensity") or 0.5),
             "timing_type": sound.get("timing_type") or "instant",
             "tier": sound.get("tier") or "emphasis",
@@ -73,7 +74,7 @@ def build_chroma_document(sound: dict) -> str:
     events = ", ".join(sound.get("event_types") or [])
     return (
         f"{sound.get('description') or ''}. "
-        f"Tags: {tags}. Emotion: {sound.get('emotion') or ''}. "
+        f"Tags: {tags}. Emotion: {sound.get('emotion') or ''}. Mood: {sound.get('mood') or ''}. "
         f"Events: {events}."
     )
 
@@ -93,6 +94,7 @@ def add_sound_to_library(name: str, file_path: str, source_url: str, tag_data: d
     doc = build_chroma_document(sound)
     add_sound_embedding(sound_id, doc, {
         "emotion": tag_data.get("emotion") or "",
+        "mood": tag_data.get("mood") or "",
         "intensity": float(tag_data.get("intensity") or 0.5),
         "timing_type": tag_data.get("timing_type") or "instant",
         "tier": tag_data.get("tier") or "emphasis",

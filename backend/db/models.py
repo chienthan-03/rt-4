@@ -13,6 +13,7 @@ def init_db(db_path: str):
             file_path     TEXT NOT NULL,
             duration_ms   INTEGER,
             emotion       TEXT,
+            mood          TEXT,
             intensity     REAL,
             timing_type   TEXT,
             tier          TEXT DEFAULT 'emphasis',
@@ -28,6 +29,10 @@ def init_db(db_path: str):
         conn.execute("ALTER TABLE sounds ADD COLUMN tier TEXT DEFAULT 'emphasis'")
     except sqlite3.OperationalError:
         pass
+    try:
+        conn.execute("ALTER TABLE sounds ADD COLUMN mood TEXT")
+    except sqlite3.OperationalError:
+        pass
     conn.commit()
     conn.close()
 
@@ -35,13 +40,13 @@ def insert_sound(db_path: str, sound: dict):
     conn = sqlite3.connect(db_path)
     conn.execute("""
         INSERT OR REPLACE INTO sounds
-        (id, name, source_url, file_path, duration_ms, emotion, intensity,
+        (id, name, source_url, file_path, duration_ms, emotion, mood, intensity,
          timing_type, tier, tags, event_types, description)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         sound["id"], sound["name"], sound.get("source_url"),
         sound["file_path"], sound.get("duration_ms"),
-        sound.get("emotion"), sound.get("intensity"), sound.get("timing_type"),
+        sound.get("emotion"), sound.get("mood"), sound.get("intensity"), sound.get("timing_type"),
         sound.get("tier") or "emphasis",
         json.dumps(sound.get("tags", [])),
         json.dumps(sound.get("event_types", [])),
