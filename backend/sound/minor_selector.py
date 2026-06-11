@@ -54,3 +54,23 @@ def select_minor_sounds(cues: list[MinorCue]) -> list[dict | None]:
             used_ids.add(sel["chosen_id"])
         selections.append(sel)
     return selections
+
+
+def select_fill_sounds(count: int) -> list[dict]:
+    pool = _attention_pool()
+    short_pool = [s for s in pool if int(s.get("duration_ms") or 9999) < 1000]
+    candidates = short_pool or pool
+    if not candidates:
+        return []
+
+    selections: list[dict] = []
+    used_ids: set[str] = set()
+    idx = 0
+    while len(selections) < count and candidates:
+        sound = candidates[idx % len(candidates)]
+        idx += 1
+        if sound["id"] in used_ids and len(used_ids) < len(candidates):
+            continue
+        used_ids.add(sound["id"])
+        selections.append(sound_to_selection(sound, reason="gap_fill"))
+    return selections

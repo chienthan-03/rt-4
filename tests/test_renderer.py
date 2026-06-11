@@ -32,3 +32,31 @@ def test_build_ffmpeg_filter_empty_placements():
     filter_str, inputs = build_ffmpeg_filter([], original_duration_s=10.0)
     assert inputs == []
     assert "[0:a]anull[aout]" in filter_str
+
+
+def test_build_background_filter_parts():
+    from backend.render.renderer import build_background_filter_parts
+
+    bg_placements = [
+        {
+            "sound_file": "/sounds/ambient.mp3",
+            "start_ms": 0,
+            "end_ms": 15000,
+            "volume": 0.15,
+        },
+        {
+            "sound_file": "/sounds/ambient.mp3",
+            "start_ms": 20000,
+            "end_ms": 30000,
+            "volume": 0.15,
+        },
+    ]
+    inputs, filters, label = build_background_filter_parts(
+        bg_placements, total_duration_s=30.0, start_input_idx=3, bg_volume=0.15
+    )
+    joined = ";".join(filters)
+    assert "-stream_loop" in inputs
+    assert "atrim" in joined
+    assert "asetpts" in joined
+    assert "bgall" in joined
+    assert label == "[bgall]"

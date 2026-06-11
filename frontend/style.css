@@ -110,10 +110,17 @@ h1 {
 /* Upload Card */
 .upload-card { padding: 0.5rem; }
 
-.volume-control {
+.volume-controls {
   padding: 1.25rem 1.5rem 0.75rem;
   border-bottom: 1px solid var(--border);
   margin-bottom: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.volume-control {
+  display: flex;
+  flex-direction: column;
 }
 .volume-label-row {
   display: flex;

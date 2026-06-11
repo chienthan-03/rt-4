@@ -30,13 +30,17 @@ const STEP_LABELS = {
   rendering:           '🎞️ Đang render video cuối cùng…',
 };
 
-const getMemeVolume = () => {
-  if (typeof window.getMemeVolume === 'function') {
-    return window.getMemeVolume();
+const getSliderVolume = (getterName, sliderId, fallback) => {
+  if (typeof window[getterName] === 'function') {
+    return window[getterName]();
   }
-  const slider = document.getElementById('memeVolumeSlider');
-  return slider ? Number(slider.value) / 100 : 0.5;
+  const slider = document.getElementById(sliderId);
+  return slider ? Number(slider.value) / 100 : fallback;
 };
+
+const getMajorVolume = () => getSliderVolume('getMajorVolume', 'majorVolumeSlider', 0.5);
+const getMinorVolume = () => getSliderVolume('getMinorVolume', 'minorVolumeSlider', 0.35);
+const getBgVolume = () => getSliderVolume('getBgVolume', 'bgVolumeSlider', 0.15);
 
 const getNiche = () => {
   if (typeof window.getNiche === 'function') {
@@ -91,7 +95,9 @@ async function handleFile(file) {
 
   const formData = new FormData();
   formData.append('file', file);
-  formData.append('meme_volume', String(getMemeVolume()));
+  formData.append('major_volume', String(getMajorVolume()));
+  formData.append('minor_volume', String(getMinorVolume()));
+  formData.append('bg_volume', String(getBgVolume()));
   formData.append('niche', getNiche());
 
   try {

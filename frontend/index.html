@@ -25,25 +25,65 @@
 
     <!-- Upload zone -->
     <div class="card upload-card" id="uploadCard">
-      <div class="volume-control">
-        <div class="volume-label-row">
-          <label class="volume-label" for="memeVolumeSlider">🔊 Volume meme sound</label>
-          <output class="volume-value" id="memeVolumeLabel" for="memeVolumeSlider">50%</output>
+      <div class="volume-controls">
+        <div class="volume-control">
+          <div class="volume-label-row">
+            <label class="volume-label" for="majorVolumeSlider">🔊 Sound chính (meme)</label>
+            <output class="volume-value" id="majorVolumeLabel" for="majorVolumeSlider">50%</output>
+          </div>
+          <input
+            type="range"
+            id="majorVolumeSlider"
+            class="volume-slider"
+            min="0"
+            max="100"
+            step="1"
+            value="50"
+            aria-label="Điều chỉnh volume sound chính"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="50"
+          >
         </div>
-        <input
-          type="range"
-          id="memeVolumeSlider"
-          class="volume-slider"
-          min="0"
-          max="100"
-          step="1"
-          value="50"
-          aria-label="Điều chỉnh volume meme sound"
-          aria-valuemin="0"
-          aria-valuemax="100"
-          aria-valuenow="50"
-        >
-        <p class="volume-hint" id="memeVolumeHint">Volume meme vừa phải — mặc định khuyên dùng</p>
+        <div class="volume-control">
+          <div class="volume-label-row">
+            <label class="volume-label" for="minorVolumeSlider">🔉 Hiệu ứng phụ</label>
+            <output class="volume-value" id="minorVolumeLabel" for="minorVolumeSlider">35%</output>
+          </div>
+          <input
+            type="range"
+            id="minorVolumeSlider"
+            class="volume-slider"
+            min="0"
+            max="100"
+            step="1"
+            value="35"
+            aria-label="Điều chỉnh volume hiệu ứng phụ"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="35"
+          >
+        </div>
+        <div class="volume-control">
+          <div class="volume-label-row">
+            <label class="volume-label" for="bgVolumeSlider">🎵 Nhạc nền</label>
+            <output class="volume-value" id="bgVolumeLabel" for="bgVolumeSlider">15%</output>
+          </div>
+          <input
+            type="range"
+            id="bgVolumeSlider"
+            class="volume-slider"
+            min="0"
+            max="100"
+            step="1"
+            value="15"
+            aria-label="Điều chỉnh volume nhạc nền"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="15"
+          >
+        </div>
+        <p class="volume-hint" id="volumeHint">3 tầng âm thanh độc lập — major / minor / background</p>
       </div>
       <div class="niche-control">
         <div class="niche-label-row">
@@ -78,35 +118,35 @@
         <p class="niche-hint" id="nicheHint">Nhiều meme sound — phù hợp clip hài, reaction, trend</p>
       </div>
       <script>
-        (function initMemeVolumeSlider() {
-          var slider = document.getElementById('memeVolumeSlider');
-          var label = document.getElementById('memeVolumeLabel');
-          var hint = document.getElementById('memeVolumeHint');
-          if (!slider || !label) return;
+        (function initVolumeSliders() {
+          var sliders = [
+            { id: 'majorVolumeSlider', labelId: 'majorVolumeLabel', getter: 'getMajorVolume' },
+            { id: 'minorVolumeSlider', labelId: 'minorVolumeLabel', getter: 'getMinorVolume' },
+            { id: 'bgVolumeSlider', labelId: 'bgVolumeLabel', getter: 'getBgVolume' },
+          ];
 
-          function getHint(pct) {
-            if (pct === 0) return 'Meme sound sẽ bị tắt hoàn toàn';
-            if (pct <= 25) return 'Volume meme rất nhỏ — phù hợp khi giọng nói đã to';
-            if (pct <= 50) return 'Volume meme vừa phải — mặc định khuyên dùng';
-            if (pct <= 75) return 'Volume meme lớn — meme nổi bật hơn giọng gốc';
-            return 'Volume meme tối đa — meme rất to (100%)';
-          }
+          sliders.forEach(function (cfg) {
+            var slider = document.getElementById(cfg.id);
+            var label = document.getElementById(cfg.labelId);
+            if (!slider || !label) return;
 
-          function syncVolumeUI() {
-            var pct = Math.round(Number(slider.value));
-            label.textContent = pct + '%';
-            slider.setAttribute('aria-valuenow', String(pct));
-            slider.style.setProperty('--volume-percent', pct + '%');
-            if (hint) hint.textContent = getHint(pct);
-          }
+            function syncVolumeUI() {
+              var pct = Math.round(Number(slider.value));
+              label.textContent = pct + '%';
+              slider.setAttribute('aria-valuenow', String(pct));
+              slider.style.setProperty('--volume-percent', pct + '%');
+            }
 
-          slider.addEventListener('input', syncVolumeUI);
-          slider.addEventListener('change', syncVolumeUI);
-          syncVolumeUI();
+            slider.addEventListener('input', syncVolumeUI);
+            slider.addEventListener('change', syncVolumeUI);
+            syncVolumeUI();
 
-          window.getMemeVolume = function () {
-            return Number(slider.value) / 100;
-          };
+            window[cfg.getter] = function () {
+              return Number(slider.value) / 100;
+            };
+          });
+
+          window.getMemeVolume = window.getMajorVolume;
         })();
 
         (function initNicheSelector() {

@@ -36,6 +36,6 @@ def test_create_minor_placements_lower_volume():
             "duration_ms": 500,
         },
     }]
-    placements = create_minor_placements(cues, selections, meme_volume=0.8)
+    placements = create_minor_placements(cues, selections, minor_volume=0.35)
     assert len(placements) == 1
-    assert placements[0]["volume"] == pytest.approx(0.28)
+    assert placements[0]["volume"] == pytest.approx(0.35)

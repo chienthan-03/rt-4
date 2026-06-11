@@ -20,11 +20,21 @@ def index():
 @app.post("/upload")
 async def upload_video(
     file: UploadFile = File(...),
-    meme_volume: float = Form(0.5),
+    major_volume: float | None = Form(None),
+    minor_volume: float = Form(0.35),
+    bg_volume: float = Form(0.15),
+    meme_volume: float | None = Form(None),
     niche: str = Form(DEFAULT_NICHE),
 ):
-    if meme_volume < 0.0 or meme_volume > 2.0:
-        raise HTTPException(400, "Meme volume must be between 0.0 and 2.0")
+    resolved_major = major_volume if major_volume is not None else (meme_volume if meme_volume is not None else 0.5)
+
+    for label, value in (
+        ("Major volume", resolved_major),
+        ("Minor volume", minor_volume),
+        ("Background volume", bg_volume),
+    ):
+        if value < 0.0 or value > 2.0:
+            raise HTTPException(400, f"{label} must be between 0.0 and 2.0")
 
     try:
         niche = normalize_niche(niche)
@@ -44,7 +54,14 @@ async def upload_video(
     with open(video_path, "wb") as f:
         shutil.copyfileobj(file.file, f)
 
-    task = process_video.delay(video_path, job_id, meme_volume, niche)
+    task = process_video.delay(
+        video_path,
+        job_id,
+        resolved_major,
+        niche,
+        minor_volume,
+        bg_volume,
+    )
     return {"job_id": job_id, "task_id": task.id, "niche": niche}
 
 @app.get("/status/{task_id}")
