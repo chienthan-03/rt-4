@@ -4,6 +4,8 @@ ATTENTION_ALIASES: dict[str, list[str]] = {
     "scene_change": ["whoosh-sfx", "whoosh", "woosh"],
     "transition": ["mouse-click", "click", "pop"],
     "silence_break": ["mouse-click", "click"],
+    "speech_pause": ["pop", "ding"],
+    "energy_dip": ["ding", "tick"],
 }
 
 ATTENTION_KEYWORDS = ("whoosh", "woosh", "pop", "click", "swipe", "ding", "ting", "swoosh")
