@@ -4,7 +4,7 @@
 
 **Goal:** Implement a 3-layer cohesive audio system (Major, Minor, Background) with gap-fill logic and UI volume controls to make meme sound insertion feel continuous and professional.
 
-**Architecture:** Modifies detection thresholds, adds two new minor cue extractors (speech pause, energy dip), implements RMS-based background music detection with ffmpeg mixing, introduces gap-fill logic to avoid >8s silences, and replaces the single volume slider with three independent sliders on the frontend.
+**Architecture:** Modifies detection thresholds, adds two new minor cue extractors (speech pause, energy dip), implements RMS-based background music detection with ffmpeg mixing, introduces gap-fill logic to avoid >8s silences, updates the database schema for background moods, and replaces the single volume slider with three independent sliders on the frontend.
 
 **Tech Stack:** Python, FastAPI, librosa, ffmpeg, Vanilla JS
 
@@ -14,14 +14,29 @@
 
 **Files:**
 - Modify: `backend/detection/highlight_detector.py`
-- Modify: `tests/test_highlight_detector.py` (if exists)
+- Modify: `tests/test_highlight_detector.py`
 
-- [ ] **Step 1: Modify threshold in highlight detector**
-Change the default threshold from 0.5 to 0.35 in `detect_highlights`.
+- [ ] **Step 1: Write the failing test**
+```python
+def test_detect_highlights_threshold_035():
+    # Write a test that ensures highlights with score 0.4 are kept, which would fail under 0.5 threshold
+    pass
+```
 
-- [ ] **Step 2: Commit**
+- [ ] **Step 2: Run test to verify it fails**
+Run: `pytest tests/test_highlight_detector.py`
+Expected: FAIL
+
+- [ ] **Step 3: Write minimal implementation**
+Modify `detect_highlights` default threshold from 0.5 to 0.35 in `backend/detection/highlight_detector.py`.
+
+- [ ] **Step 4: Run test to verify it passes**
+Run: `pytest tests/test_highlight_detector.py`
+Expected: PASS
+
+- [ ] **Step 5: Commit**
 ```bash
-git add backend/detection/highlight_detector.py
+git add backend/detection/highlight_detector.py tests/test_highlight_detector.py
 git commit -m "feat: lower highlight detection threshold to 0.35"
 ```
 
@@ -29,116 +44,236 @@ git commit -m "feat: lower highlight detection threshold to 0.35"
 
 **Files:**
 - Modify: `backend/placement/placer.py`
+- Modify: `tests/test_placer.py`
 
-- [ ] **Step 1: Remove anticipation_ms**
-In `backend/placement/placer.py`, remove `anticipation_ms=200` parameter from `create_placements`.
-Remove the logic that subtracts `anticipation_ms` for `instant` and `buildup` timing types.
+- [ ] **Step 1: Write the failing test**
+```python
+def test_placements_no_double_offset():
+    # Test that instant timing type only offsets by 10% of duration and does not subtract an additional anticipation_ms
+    pass
+```
 
-- [ ] **Step 2: Commit**
+- [ ] **Step 2: Run test to verify it fails**
+Run: `pytest tests/test_placer.py`
+Expected: FAIL
+
+- [ ] **Step 3: Write minimal implementation**
+In `backend/placement/placer.py`, remove `anticipation_ms=200` parameter from `create_placements`. Remove the logic that subtracts `anticipation_ms` for `instant` and `buildup` timing types.
+
+- [ ] **Step 4: Run test to verify it passes**
+Run: `pytest tests/test_placer.py`
+Expected: PASS
+
+- [ ] **Step 5: Commit**
 ```bash
-git add backend/placement/placer.py
+git add backend/placement/placer.py tests/test_placer.py
 git commit -m "fix: remove anticipation_ms double-offset in placer"
 ```
 
-### Task 3: Extract RMS Segments
+### Task 3: DB Schema and Ingestion Update for Mood
+
+**Files:**
+- Modify: `backend/db/models.py`
+- Modify: `backend/sound/library.py`
+- Modify: `tests/test_db_models.py`
+
+- [ ] **Step 1: Write the failing test**
+```python
+def test_db_init_adds_mood_column():
+    # Create DB, add a sound with mood, retrieve and assert mood is present
+    pass
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+Run: `pytest tests/test_db_models.py`
+Expected: FAIL
+
+- [ ] **Step 3: Write minimal implementation**
+In `models.py`, update `CREATE TABLE` and `ALTER TABLE` to add `mood TEXT`. Update `insert_sound` to handle `mood`. In `library.py`, update `add_sound_to_library` and `sound_to_selection` to process `mood`.
+
+- [ ] **Step 4: Run test to verify it passes**
+Run: `pytest tests/test_db_models.py`
+Expected: PASS
+
+- [ ] **Step 5: Commit**
+```bash
+git add backend/db/models.py backend/sound/library.py tests/test_db_models.py
+git commit -m "feat: add mood column to database schema and ingestion logic"
+```
+
+### Task 4: Extract RMS Segments
 
 **Files:**
 - Modify: `backend/signals/audio_signals.py`
+- Modify: `tests/test_audio_signals.py`
 
-- [ ] **Step 1: Write `extract_rms_segments`**
-In `backend/signals/audio_signals.py`, add a function to calculate RMS mean for 10-second segments using librosa. Return list of dicts `[{"start_ms": int, "end_ms": int, "rms_mean": float}]`.
+- [ ] **Step 1: Write the failing test**
+```python
+def test_extract_rms_segments():
+    # Create dummy audio, test extract_rms_segments returns list of dicts with rms_mean
+    pass
+```
 
-- [ ] **Step 2: Commit**
+- [ ] **Step 2: Run test to verify it fails**
+Run: `pytest tests/test_audio_signals.py`
+Expected: FAIL
+
+- [ ] **Step 3: Write minimal implementation**
+In `backend/signals/audio_signals.py`, add `extract_rms_segments` to calculate RMS mean for 10-second segments using librosa.
+
+- [ ] **Step 4: Run test to verify it passes**
+Run: `pytest tests/test_audio_signals.py`
+Expected: PASS
+
+- [ ] **Step 5: Commit**
 ```bash
-git add backend/signals/audio_signals.py
+git add backend/signals/audio_signals.py tests/test_audio_signals.py
 git commit -m "feat: add extract_rms_segments to audio signals"
 ```
 
-### Task 4: New Minor Cue Extractors
+### Task 5: New Minor Cue Extractors
 
 **Files:**
 - Modify: `backend/detection/minor_cues.py`
+- Modify: `tests/test_minor_cues.py`
 
-- [ ] **Step 1: Write `extract_speech_pause_cues`**
-Detect gaps > 1500ms between transcript segments. Ensure they don't overlap major highlights.
+- [ ] **Step 1: Write the failing tests**
+```python
+def test_extract_speech_pause_cues():
+    # Provide segments with gap > 1500ms, expect cue
+    pass
 
-- [ ] **Step 2: Write `extract_energy_dip_cues`**
-Detect segments where RMS is < 20% of video median, lasting > 1000ms. Avoid major highlights.
+def test_extract_energy_dip_cues():
+    # Provide RMS segments with dip > 1000ms, expect cue
+    pass
+```
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 2: Run test to verify it fails**
+Run: `pytest tests/test_minor_cues.py`
+Expected: FAIL
+
+- [ ] **Step 3: Write minimal implementation**
+In `backend/detection/minor_cues.py`, implement `extract_speech_pause_cues` and `extract_energy_dip_cues`. Avoid major highlights buffer.
+
+- [ ] **Step 4: Run test to verify it passes**
+Run: `pytest tests/test_minor_cues.py`
+Expected: PASS
+
+- [ ] **Step 5: Commit**
 ```bash
-git add backend/detection/minor_cues.py
+git add backend/detection/minor_cues.py tests/test_minor_cues.py
 git commit -m "feat: add speech_pause and energy_dip cue extractors"
 ```
 
-### Task 5: Background Detector & Attention Map
+### Task 6: Background Detector & Attention Map
 
 **Files:**
 - Create: `backend/detection/background_detector.py`
 - Modify: `backend/sound/attention_map.py`
+- Create: `tests/test_background_detector.py`
 
-- [ ] **Step 1: Write background detector logic**
-Implement `should_use_background`, `select_background_mood`, and `get_background_segments` using the 0.02 `rms_threshold`.
+- [ ] **Step 1: Write the failing test**
+```python
+def test_should_use_background():
+    # Test with low RMS (>30% silent) returns True, high RMS returns False
+    pass
+```
 
-- [ ] **Step 2: Update attention map**
-In `backend/sound/attention_map.py`, add mapping `speech_pause` → `["pop", "ding"]` and `energy_dip` → `["ding", "tick"]`.
+- [ ] **Step 2: Run test to verify it fails**
+Run: `pytest tests/test_background_detector.py`
+Expected: FAIL
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 3: Write minimal implementation**
+Implement `should_use_background`, `select_background_mood`, and `get_background_segments` using the 0.02 `rms_threshold`. In `backend/sound/attention_map.py`, add mapping `speech_pause` → `["pop", "ding"]` and `energy_dip` → `["ding", "tick"]`.
+
+- [ ] **Step 4: Run test to verify it passes**
+Run: `pytest tests/test_background_detector.py`
+Expected: PASS
+
+- [ ] **Step 5: Commit**
 ```bash
-git add backend/detection/background_detector.py backend/sound/attention_map.py
+git add backend/detection/background_detector.py backend/sound/attention_map.py tests/test_background_detector.py
 git commit -m "feat: add background detector and update attention map"
 ```
 
-### Task 6: Gap-Fill & Background Placements
+### Task 7: Gap-Fill & Background Placements
 
 **Files:**
 - Modify: `backend/placement/placer.py`
+- Modify: `tests/test_placer_gap.py`
 
-- [ ] **Step 1: Write `gap_fill_pass`**
-Implement logic to find >8000ms gaps and insert multiple fillers spaced evenly using `pick_filler_sound()`.
+- [ ] **Step 1: Write the failing test**
+```python
+def test_gap_fill_pass():
+    # Test gaps > 8000ms are filled with multiple evenly spaced fillers, and gaps < 8000ms are ignored
+    pass
+```
 
-- [ ] **Step 2: Write `create_background_placements`**
-Implement logic to generate placements for background segments.
-Also, remove `MINOR_VOLUME_RATIO` and `meme_volume` parameter from `create_minor_placements`, adding `minor_volume` parameter with default 0.35.
+- [ ] **Step 2: Run test to verify it fails**
+Run: `pytest tests/test_placer_gap.py`
+Expected: FAIL
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 3: Write minimal implementation**
+In `backend/placement/placer.py`, implement `gap_fill_pass`. Implement `create_background_placements`. Update `create_minor_placements` signature.
+
+- [ ] **Step 4: Run test to verify it passes**
+Run: `pytest tests/test_placer_gap.py`
+Expected: PASS
+
+- [ ] **Step 5: Commit**
 ```bash
-git add backend/placement/placer.py
+git add backend/placement/placer.py tests/test_placer_gap.py
 git commit -m "feat: add gap fill pass and background placements"
 ```
 
-### Task 7: Renderer Updates
+### Task 8: Renderer Updates
 
 **Files:**
 - Modify: `backend/render/renderer.py`
+- Modify: `tests/test_renderer.py`
 
-- [ ] **Step 1: Write `build_background_filter_parts`**
-Implement ffmpeg filter generation for background tracks (using `-stream_loop -1` input, `atrim`, `asetpts`, `afade`).
+- [ ] **Step 1: Write the failing test**
+```python
+def test_build_background_filter_parts():
+    # Verify filter contains -stream_loop, atrim, asetpts, and bgall mix
+    pass
+```
 
-- [ ] **Step 2: Update `build_ffmpeg_filter` and `render_video`**
-Integrate background bus `[bgall]` with the SFX bus and main audio. Support 3 distinct volumes.
+- [ ] **Step 2: Run test to verify it fails**
+Run: `pytest tests/test_renderer.py`
+Expected: FAIL
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 3: Write minimal implementation**
+In `backend/render/renderer.py`, implement `build_background_filter_parts` and update `build_ffmpeg_filter` for the background bus and volume mixing.
+
+- [ ] **Step 4: Run test to verify it passes**
+Run: `pytest tests/test_renderer.py`
+Expected: PASS
+
+- [ ] **Step 5: Commit**
 ```bash
-git add backend/render/renderer.py
+git add backend/render/renderer.py tests/test_renderer.py
 git commit -m "feat: update renderer for background track mixing"
 ```
 
-### Task 8: Backend Tasks Integration
+### Task 9: Backend Tasks Integration
 
 **Files:**
 - Modify: `backend/tasks.py`
 
 - [ ] **Step 1: Integrate new pipeline**
-Update `process_video` signature to accept `major_volume`, `minor_volume`, `bg_volume`. Combine the 3 minor cue sources. Run gap fill pass. Run background detector and generate placements. Pass all placements to renderer.
+Update `process_video` signature to accept `major_volume`, `minor_volume`, `bg_volume`. Combine the 3 minor cue sources. Run gap fill pass. Run background detector and generate placements.
 
-- [ ] **Step 2: Commit**
+- [ ] **Step 2: Run manual verification**
+Verify Celery task processes video without throwing errors.
+
+- [ ] **Step 3: Commit**
 ```bash
 git add backend/tasks.py
 git commit -m "feat: integrate 3-layer audio pipeline in tasks.py"
 ```
 
-### Task 9: Frontend Updates
+### Task 10: Frontend Updates
 
 **Files:**
 - Modify: `frontend/index.html`
@@ -146,24 +281,21 @@ git commit -m "feat: integrate 3-layer audio pipeline in tasks.py"
 - Modify: `frontend/style.css`
 
 - [ ] **Step 1: Update UI layout**
-Replace `memeVolumeSlider` with 3 sliders (Major, Minor, Background) in `index.html`. Add corresponding styles in `style.css`.
+Replace `memeVolumeSlider` with 3 sliders (Major, Minor, Background) in `index.html`. Add corresponding styles in `style.css`. Extract values in `app.js` and update FormData.
 
-- [ ] **Step 2: Update `app.js`**
-Extract values from the 3 sliders and send `major_volume`, `minor_volume`, `bg_volume` in the POST `/upload` FormData.
-
-- [ ] **Step 3: Commit**
+- [ ] **Step 2: Commit**
 ```bash
 git add frontend/
 git commit -m "feat: update frontend with 3-layer volume sliders"
 ```
 
-### Task 10: Data Migration
+### Task 11: Data Migration Script
 
 **Files:**
 - Create: `scripts/backfill_mood.py`
 
 - [ ] **Step 1: Write backfill script**
-Create script to `ALTER TABLE sounds ADD COLUMN mood TEXT` if not exists, and auto-tag existing `tier='background'` sounds with a mood.
+Create script to auto-tag existing `tier='background'` sounds with a mood. Use existing DB models to fetch and update.
 
 - [ ] **Step 2: Commit**
 ```bash
