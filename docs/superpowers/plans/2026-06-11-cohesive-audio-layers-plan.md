@@ -214,7 +214,7 @@ Run: `pytest tests/test_placer_gap.py`
 Expected: FAIL
 
 - [ ] **Step 3: Write minimal implementation**
-In `backend/placement/placer.py`, implement `gap_fill_pass`. Implement `create_background_placements`. Update `create_minor_placements` signature.
+In `backend/placement/placer.py`, implement `gap_fill_pass`. Implement `create_background_placements`. Update `create_minor_placements` signature to replace `meme_volume` with `minor_volume: float = 0.35` and completely remove `MINOR_VOLUME_RATIO` from the file.
 
 - [ ] **Step 4: Run test to verify it passes**
 Run: `pytest tests/test_placer_gap.py`
@@ -262,7 +262,8 @@ git commit -m "feat: update renderer for background track mixing"
 - Modify: `backend/tasks.py`
 
 - [ ] **Step 1: Integrate new pipeline**
-Update `process_video` signature to accept `major_volume`, `minor_volume`, `bg_volume`. Combine the 3 minor cue sources. Run gap fill pass. Run background detector and generate placements.
+Update `process_video` signature to accept `major_volume`, `minor_volume`, `bg_volume`. Combine the 3 minor cue sources: `extract_minor_cues` + `extract_speech_pause_cues` + `extract_energy_dip_cues`. Sort them, then pass to `plan_minor_density`.
+Run gap fill pass AFTER `merge_placements`. Run background detector and generate background placements. Pass all to renderer.
 
 - [ ] **Step 2: Run manual verification**
 Verify Celery task processes video without throwing errors.
@@ -281,7 +282,7 @@ git commit -m "feat: integrate 3-layer audio pipeline in tasks.py"
 - Modify: `frontend/style.css`
 
 - [ ] **Step 1: Update UI layout**
-Replace `memeVolumeSlider` with 3 sliders (Major, Minor, Background) in `index.html`. Add corresponding styles in `style.css`. Extract values in `app.js` and update FormData.
+Replace `memeVolumeSlider` with 3 sliders (Major, Minor, Background) in `index.html`. Add corresponding styles in `style.css`. In `app.js`, rename `getMemeVolume()` to `getMajorVolume()`, extract values from all 3 sliders, and update FormData in `handleFile`.
 
 - [ ] **Step 2: Commit**
 ```bash
