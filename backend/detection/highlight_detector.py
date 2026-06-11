@@ -84,7 +84,7 @@ def score_to_highlight(merged_event: dict) -> Highlight:
         context_text=merged_event["context_text"],
     )
 
-def detect_highlights(all_events: list[dict], threshold: float = 0.5) -> list[Highlight]:
+def detect_highlights(all_events: list[dict], threshold: float = 0.35) -> list[Highlight]:
     merged = merge_events(all_events, window_ms=2000)
     return [
         score_to_highlight(e) for e in merged

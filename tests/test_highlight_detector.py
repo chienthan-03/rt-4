@@ -33,3 +33,11 @@ def test_detect_highlights_filters_low_score():
     highlights = detect_highlights(events, threshold=0.5)
     assert len(highlights) == 1
     assert highlights[0].emotion == "shock"
+
+def test_detect_highlights_threshold_035():
+    events = [
+        {"timestamp_ms": 1000, "score": 0.4, "type": "speech_keyword", "context_text": "hello"},
+    ]
+    highlights = detect_highlights(events)
+    assert len(highlights) == 1
+    assert highlights[0].score == 0.4
