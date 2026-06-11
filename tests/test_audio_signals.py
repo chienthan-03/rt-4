@@ -28,3 +28,20 @@ def test_extract_audio_events_detects_spike(tmp_path):
     events = extract_audio_events(wav_path)
     spike_events = [e for e in events if e["type"] == "audio_spike"]
     assert len(spike_events) > 0
+
+def test_extract_rms_segments(tmp_path):
+    from backend.signals.audio_signals import extract_rms_segments
+    wav_path = str(tmp_path / "rms.wav")
+    sr = 16000
+    audio = np.ones(sr * 25, dtype=np.float32) * 0.5  # 25 seconds of constant amplitude
+    sf.write(wav_path, audio, sr)
+    
+    segments = extract_rms_segments(wav_path, segment_duration_s=10.0)
+    assert isinstance(segments, list)
+    assert len(segments) == 3 # 10s, 10s, 5s
+    
+    for seg in segments:
+        assert "start_ms" in seg
+        assert "end_ms" in seg
+        assert "rms_mean" in seg
+        assert seg["rms_mean"] > 0

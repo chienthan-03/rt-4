@@ -51,3 +51,30 @@ def extract_audio_events(wav_path: str) -> list[dict]:
         pass
 
     return events
+
+def extract_rms_segments(wav_path: str, segment_duration_s: float = 10.0) -> list[dict]:
+    y, sr = librosa.load(wav_path, sr=16000, mono=True)
+    if len(y) == 0:
+        return []
+    
+    hop_length = 512
+    rms = librosa.feature.rms(y=y, hop_length=hop_length)[0]
+    
+    segment_duration_ms = int(segment_duration_s * 1000)
+    samples_per_segment = int(segment_duration_s * sr)
+    frames_per_segment = librosa.samples_to_frames(samples_per_segment, hop_length=hop_length)
+    
+    segments = []
+    num_frames = len(rms)
+    for i in range(0, num_frames, frames_per_segment):
+        segment_rms = rms[i:i+frames_per_segment]
+        start_ms = int(librosa.frames_to_time(i, sr=sr, hop_length=hop_length) * 1000)
+        end_ms = min(start_ms + segment_duration_ms, int(len(y) / sr * 1000))
+        
+        segments.append({
+            "start_ms": start_ms,
+            "end_ms": end_ms,
+            "rms_mean": float(np.mean(segment_rms))
+        })
+    
+    return segments
