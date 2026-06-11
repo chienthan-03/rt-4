@@ -42,7 +42,9 @@ def test_create_placements_skips_missing_sound_file():
     assert placements == []
 
 
-def test_anticipation_offset_applied(tmp_path):
+
+
+def test_placements_no_double_offset(tmp_path):
     sound_file = tmp_path / "test.mp3"
     sound_file.write_bytes(b"ID3")
     h = Highlight(start_ms=0, end_ms=2000, peak_ms=1000, score=0.9, impact_score=64)
@@ -54,7 +56,6 @@ def test_anticipation_offset_applied(tmp_path):
             "timing_type": "instant",
         },
     }
-    placements = create_placements([h], [sel], anticipation_ms=200)
-    expected = calculate_insert_ms(1000, 1000, "instant") - 200
+    placements = create_placements([h], [sel])
+    expected = calculate_insert_ms(1000, 1000, "instant")
     assert placements[0]["insert_ms"] == expected
-

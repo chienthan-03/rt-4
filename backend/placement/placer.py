@@ -41,7 +41,6 @@ def create_placements(
     highlights: list[Highlight],
     sound_selections: list[dict],
     meme_volume: float = 0.5,
-    anticipation_ms: int = 200,
 ) -> list[dict]:
     placements = []
     for h, sel in zip(highlights, sound_selections):
@@ -55,8 +54,6 @@ def create_placements(
             continue
 
         insert_ms = calculate_insert_ms(h.peak_ms, duration_ms, timing_type, h.end_ms)
-        if timing_type in ("instant", "buildup"):
-            insert_ms -= anticipation_ms
         insert_ms = max(0, insert_ms)
 
         placements.append({
