@@ -14,6 +14,7 @@ def process_video(
     niche: str = "entertainment",
     minor_volume: float = 0.35,
     bg_volume: float = 0.15,
+    enable_background: bool = True,
     meme_volume: float | None = None,
 ):
     if meme_volume is not None:
@@ -81,11 +82,7 @@ def process_video(
             minor_selections = select_minor_sounds(minor_cues)
 
         self.update_state(state="PROGRESS", meta={"step": "placing_sounds"})
-        from backend.detection.background_detector import (
-            get_background_segments,
-            select_background_mood,
-            should_use_background,
-        )
+        from backend.detection.emotion_timeline import build_emotion_timeline
         from backend.placement.placer import (
             create_background_placements,
             create_minor_placements,
@@ -93,7 +90,7 @@ def process_video(
             gap_fill_pass,
             merge_placements,
         )
-        from backend.sound.background_selector import select_background_sound
+        from backend.sound.background_selector import select_background_for_segments
 
         major_placements = create_placements(
             highlights, sound_selections, major_volume=major_volume
@@ -112,16 +109,23 @@ def process_video(
         )
 
         bg_placements: list[dict] = []
-        if should_use_background(rms_segments):
-            mood = select_background_mood(highlights)
-            bg_sound = select_background_sound(mood)
-            bg_segments = get_background_segments(rms_segments)
+        background_warning: str | None = None
+        background_moods: list[str] = []
+
+        if enable_background:
+            timeline = build_emotion_timeline(highlights, duration_ms, segments)
+            selections = select_background_for_segments(timeline)
+            if not selections and timeline:
+                background_warning = (
+                    "Không có nhạc nền trong thư viện — output có thể nghe trống."
+                )
             bg_placements = create_background_placements(
-                bg_sound,
-                bg_segments,
+                selections,
                 major_placements,
+                duration_ms=duration_ms,
                 bg_volume=bg_volume,
             )
+            background_moods = sorted({s.get("mood", "chill") for s in selections})
 
         all_placements = sorted(
             placements + bg_placements,
@@ -155,6 +159,9 @@ def process_video(
             "highlights_kept": len(highlights),
             "minor_cues": len(minor_cues),
             "niche": niche,
+            "background_enabled": enable_background,
+            "background_moods": background_moods,
+            "background_warning": background_warning,
         }
         if transcript_skipped:
             result["transcript_skipped"] = True
