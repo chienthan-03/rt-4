@@ -5,7 +5,23 @@ from pathlib import Path
 import uuid, shutil
 from backend.config import settings
 from backend.detection.niche import DEFAULT_NICHE, normalize_niche
-from tasks import process_video
+from tasks import process_video, rerender_video
+from backend.db.models import get_sounds, update_sound_stats
+from backend.db.chroma import get_collection
+from pydantic import BaseModel
+from typing import List, Dict, Any
+
+class ActionModel(BaseModel):
+    sound_id: str | None = None
+    old_sound_id: str | None = None
+    new_sound_id: str | None = None
+    status: str
+
+class FinalizeRequest(BaseModel):
+    job_id: str
+    actions: List[ActionModel]
+    final_placements: List[Dict[str, Any]]
+    bg_volume: float = 0.15
 
 app = FastAPI(title="Meme Sound Inserter")
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
@@ -86,3 +102,60 @@ def download_video(job_id: str):
     if not Path(path).exists():
         raise HTTPException(404, "Video not found or not ready")
     return FileResponse(path, media_type="video/mp4", filename=f"meme_{job_id[:8]}.mp4")
+
+@app.get("/sounds/suggest")
+def suggest_sounds(context: str):
+    collection = get_collection()
+    if collection.count() == 0:
+        return JSONResponse({"results": []})
+    results = collection.query(
+        query_texts=[context],
+        n_results=5,
+        include=["metadatas", "distances"]
+    )
+    if not results or not results["metadatas"][0]:
+        return JSONResponse({"results": []})
+    
+    suggestions = []
+    for meta, dist in zip(results["metadatas"][0], results["distances"][0]):
+        suggestions.append({
+            "id": meta["id"],
+            "name": meta["id"].replace("_", " ").title(),
+            "file_path": meta.get("file_path", ""),
+            "duration_ms": meta.get("duration_ms", 1000),
+            "distance": dist
+        })
+    return JSONResponse({"results": suggestions})
+
+@app.get("/sounds/search")
+def search_sounds(q: str):
+    sounds = get_sounds(settings.db_path)
+    q_lower = q.lower()
+    results = [
+        s for s in sounds
+        if q_lower in s["name"].lower() or (s.get("tags") and q_lower in s["tags"].lower())
+    ]
+    return JSONResponse({"results": results[:20]})
+
+@app.post("/finalize")
+def finalize_video(req: FinalizeRequest):
+    has_changes = False
+    
+    for action in req.actions:
+        if action.status == "keep" and action.sound_id:
+            update_sound_stats(settings.db_path, action.sound_id, True)
+        elif action.status == "delete" and action.sound_id:
+            update_sound_stats(settings.db_path, action.sound_id, False)
+            has_changes = True
+        elif action.status == "replace":
+            if action.old_sound_id:
+                update_sound_stats(settings.db_path, action.old_sound_id, False)
+            if action.new_sound_id:
+                update_sound_stats(settings.db_path, action.new_sound_id, True)
+            has_changes = True
+            
+    if not has_changes:
+        return {"status": "ready", "url": f"/download/{req.job_id}"}
+        
+    task = rerender_video.delay(req.job_id, req.final_placements, req.bg_volume)
+    return {"status": "processing", "task_id": task.id}

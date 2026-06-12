@@ -165,6 +165,18 @@ function pollStatus(taskId, jobId) {
         progressBar.style.width = '100%';
         statusLabel.textContent = '✅ Hoàn thành!';
 
+        window.currentJobId = jobId;
+        window.currentPlacements = data.result?.placements || [];
+        window.feedbackActions = [];
+        if (typeof renderPlacements === 'function') renderPlacements();
+        const editorUI = document.getElementById('editorUI');
+        if (editorUI) editorUI.style.display = 'block';
+        const previewVideo = document.getElementById('previewVideo');
+        if (previewVideo) {
+          previewVideo.src = `/download/${jobId}`;
+          previewVideo.load();
+        }
+
         setTimeout(() => {
           statusCard.style.display = 'none';
           resultCard.style.display = 'block';
@@ -190,7 +202,7 @@ function pollStatus(taskId, jobId) {
             msg += ` (${data.result.transcript_note})`;
           }
           resultSub.textContent = msg;
-          downloadBtn.href = `/download/${jobId}`;
+          // downloadBtn is now handled by custom logic
         }, 600);
       } else if (data.status === 'FAILURE') {
         clearInterval(interval);
@@ -208,4 +220,175 @@ function showError(msg) {
   uploadCard.style.display = 'none';
   errorCard.style.display = 'block';
   errorMsg.textContent = `❌ Lỗi: ${msg}`;
+}
+
+// Editor Logic
+window.currentPlacements = [];
+window.feedbackActions = [];
+window.currentJobId = null;
+window.currentReplaceId = null;
+
+function renderPlacements() {
+  const list = document.getElementById('placementsList');
+  if (!list) return;
+  list.innerHTML = '';
+  window.currentPlacements.forEach(p => {
+    if (p.track === "background") return; // skip bg track for now
+    const div = document.createElement('div');
+    div.className = 'placement-item';
+    const time = (p.insert_ms / 1000).toFixed(1) + 's';
+    div.innerHTML = `
+      <span>[${time}] ${p.name || 'Sound'}</span>
+      <div class="placement-actions">
+        <button class="replace-btn" onclick="openReplaceModal('${p.placement_id}', '${p.highlight_context || ''}')">Đổi</button>
+        <button class="delete-btn" onclick="deletePlacement('${p.placement_id}')">Xóa</button>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+}
+
+window.deletePlacement = function(pid) {
+  const pIndex = window.currentPlacements.findIndex(x => x.placement_id === pid);
+  if (pIndex < 0) return;
+  const p = window.currentPlacements[pIndex];
+  window.feedbackActions.push({ sound_id: p.name, status: 'delete' });
+  window.currentPlacements.splice(pIndex, 1);
+  renderPlacements();
+};
+
+const modal = document.getElementById('replaceModal');
+const closeBtn = document.getElementById('closeModal');
+const searchInput = document.getElementById('soundSearchInput');
+const suggestDiv = document.getElementById('suggestedSounds');
+const searchDiv = document.getElementById('searchResults');
+
+if (closeBtn) {
+  closeBtn.onclick = () => modal.style.display = 'none';
+}
+
+window.openReplaceModal = async function(pid, context) {
+  window.currentReplaceId = pid;
+  modal.style.display = 'flex';
+  suggestDiv.innerHTML = 'Đang tải gợi ý...';
+  searchDiv.innerHTML = '';
+  searchInput.value = '';
+  
+  try {
+    const res = await fetch(`/sounds/suggest?context=${encodeURIComponent(context)}`);
+    const data = await res.json();
+    renderSoundOptions(data.results, suggestDiv);
+  } catch (e) {
+    suggestDiv.innerHTML = 'Lỗi tải gợi ý.';
+  }
+};
+
+if (searchInput) {
+  searchInput.addEventListener('input', async (e) => {
+    const q = e.target.value;
+    if (q.length < 2) {
+      searchDiv.innerHTML = '';
+      return;
+    }
+    const res = await fetch(`/sounds/search?q=${encodeURIComponent(q)}`);
+    const data = await res.json();
+    renderSoundOptions(data.results, searchDiv);
+  });
+}
+
+function renderSoundOptions(list, container) {
+  container.innerHTML = '';
+  if (!list || list.length === 0) {
+    container.innerHTML = '<p style="font-size:12px;color:#888;">Không có kết quả.</p>';
+    return;
+  }
+  list.forEach(s => {
+    const div = document.createElement('div');
+    div.className = 'sound-option';
+    div.innerHTML = `
+      <div class="sound-option-info">
+        <div class="sound-option-name">${s.name}</div>
+        <div class="sound-option-meta">Thời lượng: ${s.duration_ms}ms</div>
+      </div>
+      <button onclick="replaceSound('${s.id}', '${s.name}', '${s.file_path}')">Chọn</button>
+    `;
+    container.appendChild(div);
+  });
+}
+
+window.replaceSound = function(newId, newName, newPath) {
+  const p = window.currentPlacements.find(x => x.placement_id === window.currentReplaceId);
+  if (p) {
+    window.feedbackActions.push({ old_sound_id: p.name, new_sound_id: newName, status: 'replace' });
+    p.name = newName;
+    p.sound_file = newPath;
+  }
+  modal.style.display = 'none';
+  renderPlacements();
+};
+
+if (downloadBtn) {
+  downloadBtn.onclick = async function(e) {
+    e.preventDefault();
+    
+    window.currentPlacements.forEach(p => {
+      if (p.track !== "background") {
+        window.feedbackActions.push({ sound_id: p.name, status: 'keep' });
+      }
+    });
+    
+    downloadBtn.innerHTML = 'Đang xử lý...';
+    downloadBtn.style.pointerEvents = 'none';
+    
+    const payload = {
+      job_id: window.currentJobId,
+      actions: window.feedbackActions,
+      final_placements: window.currentPlacements,
+      bg_volume: getBgVolume()
+    };
+    
+    try {
+      const res = await fetch('/finalize', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.status === 'ready') {
+        window.location.href = data.url;
+        downloadBtn.innerHTML = '<span>⬇️</span> Chốt & Tải Video';
+        downloadBtn.style.pointerEvents = 'auto';
+      } else if (data.status === 'processing') {
+        pollReRender(data.task_id);
+      }
+    } catch (err) {
+      showError(err.message);
+    }
+  };
+}
+
+function pollReRender(taskId) {
+  statusLabel.textContent = '🎞️ Đang render lại video...';
+  progressBar.style.width = '50%';
+  resultCard.style.display = 'none';
+  statusCard.style.display = 'block';
+  STEPS.forEach(s => {
+    const el = document.getElementById(`step-${s}`);
+    if (el) el.className = (s === 'rendering') ? 'step active' : 'step done';
+  });
+  
+  const interval = setInterval(async () => {
+    const res = await fetch(`/status/${taskId}`);
+    const data = await res.json();
+    if (data.status === 'SUCCESS') {
+      clearInterval(interval);
+      window.location.href = `/download/${window.currentJobId}`;
+      reset();
+      downloadBtn.innerHTML = '<span>⬇️</span> Chốt & Tải Video';
+      downloadBtn.style.pointerEvents = 'auto';
+    } else if (data.status === 'FAILURE') {
+      clearInterval(interval);
+      showError('Lỗi render lại video');
+    }
+  }, 2000);
 }

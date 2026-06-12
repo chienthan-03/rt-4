@@ -232,10 +232,27 @@
       <div class="result-icon">🎉</div>
       <h2 class="result-title">Video đã sẵn sàng!</h2>
       <p class="result-sub" id="resultSub">AI đã chèn meme sounds vào video của bạn.</p>
+      
+      <div id="editorUI" style="display:none; margin-top: 20px; text-align: left;">
+        <video id="previewVideo" controls style="width: 100%; border-radius: 8px; margin-bottom: 15px; background: #000;"></video>
+        <h3 style="margin-bottom: 10px;">Danh sách Meme Sound</h3>
+        <div id="placementsList" class="timeline-list"></div>
+      </div>
+
       <a class="download-btn" id="downloadBtn" href="#">
-        <span>⬇️</span> Tải video về
+        <span>⬇️</span> Chốt & Tải Video
       </a>
       <button class="reset-btn" id="resetBtn">Upload video khác</button>
+    </div>
+
+    <div id="replaceModal" class="modal" style="display:none">
+      <div class="modal-content">
+        <span class="close-btn" id="closeModal">&times;</span>
+        <h3>Đổi Sound</h3>
+        <input type="text" id="soundSearchInput" placeholder="Tìm kiếm âm thanh..." style="width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-200); color: var(--text-primary);">
+        <div id="suggestedSounds"></div>
+        <div id="searchResults" style="margin-top: 10px;"></div>
+      </div>
     </div>
 
     <!-- Error -->

@@ -139,6 +139,12 @@ def process_video(
         render_video(video_path, all_placements, output_path, bg_volume=bg_volume)
 
         shutil.rmtree(work_dir, ignore_errors=True)
+        
+        for i, p in enumerate(all_placements):
+            p["placement_id"] = f"p_{i}"
+            if "name" not in p:
+                p["name"] = Path(p.get("sound_file", "")).stem.replace("_", " ").title()
+                
         unique_sounds = len({
             s["chosen_id"]
             for s in sound_selections
@@ -150,6 +156,7 @@ def process_video(
         result = {
             "status": "done",
             "output": output_path,
+            "placements": all_placements,
             "sounds_added": len(all_placements),
             "major_sounds": len(major_placements),
             "minor_sounds": minor_count,
@@ -174,3 +181,29 @@ def process_video(
     except Exception:
         shutil.rmtree(work_dir, ignore_errors=True)
         raise
+
+@app.task(bind=True)
+def rerender_video(
+    self,
+    job_id: str,
+    final_placements: list[dict],
+    bg_volume: float = 0.15,
+):
+    import glob
+    self.update_state(state="PROGRESS", meta={"step": "rendering"})
+    from backend.render.renderer import render_video
+    
+    upload_pattern = f"{settings.uploads_dir}/{job_id}_*"
+    matches = glob.glob(upload_pattern)
+    if not matches:
+        raise FileNotFoundError("Original video not found for rerender")
+    video_path = matches[0]
+    
+    output_path = f"{settings.outputs_dir}/{job_id}.mp4"
+    Path(settings.outputs_dir).mkdir(parents=True, exist_ok=True)
+    render_video(video_path, final_placements, output_path, bg_volume=bg_volume)
+    
+    return {
+        "status": "done",
+        "output": output_path,
+    }
