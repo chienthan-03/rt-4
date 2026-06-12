@@ -10,6 +10,22 @@ const downloadBtn = document.getElementById('downloadBtn');
 const errorCard = document.getElementById('errorCard');
 const errorMsg = document.getElementById('errorMsg');
 
+const enableBackgroundCheckbox = document.getElementById('enableBackgroundCheckbox');
+const bgVolumeSlider = document.getElementById('bgVolumeSlider');
+
+const getEnableBackground = () => enableBackgroundCheckbox?.checked ?? true;
+
+const syncBgVolumeDisabled = () => {
+  if (!bgVolumeSlider) return;
+  const enabled = getEnableBackground();
+  bgVolumeSlider.disabled = !enabled;
+  bgVolumeSlider.setAttribute('aria-disabled', String(!enabled));
+  bgVolumeSlider.closest('.volume-control')?.classList.toggle('is-disabled', !enabled);
+};
+
+enableBackgroundCheckbox?.addEventListener('change', syncBgVolumeDisabled);
+syncBgVolumeDisabled();
+
 const STEPS = [
   'extracting',
   'transcribing',
@@ -99,6 +115,7 @@ async function handleFile(file) {
   formData.append('minor_volume', String(getMinorVolume()));
   formData.append('bg_volume', String(getBgVolume()));
   formData.append('niche', getNiche());
+  formData.append('enable_background', getEnableBackground() ? 'true' : 'false');
 
   try {
     const res = await fetch('/upload', { method: 'POST', body: formData });
