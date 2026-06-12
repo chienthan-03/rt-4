@@ -188,41 +188,67 @@ def gap_fill_pass(
     return sorted(placements + fillers, key=lambda p: p["insert_ms"])
 
 
-def create_background_placements(
-    bg_selection: dict | None,
-    bg_segments: list[dict],
+def _split_range_around_majors(
+    start_ms: int,
+    end_ms: int,
     major_placements: list[dict],
+    major_dip_ms: int = 500,
+) -> list[tuple[int, int]]:
+    ranges = [(start_ms, end_ms)]
+    for major in sorted(major_placements, key=lambda p: p["insert_ms"]):
+        dip_start = major["insert_ms"] - major_dip_ms
+        dip_end = major.get("end_ms", major["insert_ms"] + 1000) + major_dip_ms
+        new_ranges: list[tuple[int, int]] = []
+        for r_start, r_end in ranges:
+            if dip_end <= r_start or dip_start >= r_end:
+                new_ranges.append((r_start, r_end))
+                continue
+            if r_start < dip_start:
+                new_ranges.append((r_start, max(r_start, dip_start)))
+            if dip_end < r_end:
+                new_ranges.append((min(r_end, dip_end), r_end))
+        ranges = [(a, b) for a, b in new_ranges if b > a]
+    return ranges
+
+
+def create_background_placements(
+    segment_selections: list[dict],
+    major_placements: list[dict],
+    duration_ms: int,
     bg_volume: float = 0.15,
+    major_dip_ms: int = 500,
 ) -> list[dict]:
-    if not bg_selection or not bg_segments:
+    if not segment_selections:
         return []
 
-    meta = bg_selection.get("metadata") or {}
-    file_path = meta.get("file_path", "")
-    if not file_path or not Path(file_path).is_file():
-        return []
-
-    major_sorted = sorted(major_placements, key=lambda p: p["insert_ms"])
     placements: list[dict] = []
-
-    for seg in bg_segments:
-        start_ms = int(seg["start_ms"])
-        end_ms = int(seg["end_ms"])
-        for major in major_sorted:
-            if major["insert_ms"] > start_ms:
-                end_ms = min(end_ms, major["insert_ms"] - 1000)
-                break
-        if end_ms <= start_ms:
+    for i, seg in enumerate(segment_selections):
+        file_path = seg.get("sound_file", "")
+        if not file_path or not Path(file_path).is_file():
             continue
 
-        placements.append({
-            "sound_file": file_path,
-            "start_ms": start_ms,
-            "end_ms": end_ms,
-            "insert_ms": start_ms,
-            "volume": bg_volume,
-            "fade_in_ms": 500,
-            "fade_out_ms": 1000,
-            "track": "background",
-        })
-    return placements
+        sub_ranges = _split_range_around_majors(
+            int(seg["start_ms"]),
+            int(seg["end_ms"]),
+            major_placements,
+            major_dip_ms=major_dip_ms,
+        )
+        for j, (start_ms, end_ms) in enumerate(sub_ranges):
+            if end_ms <= start_ms:
+                continue
+            fade_in = 500 if start_ms == 0 or j > 0 else 0
+            fade_out = 1000 if end_ms == duration_ms else 0
+            crossfade = 800 if i > 0 and j == 0 else 0
+            placements.append({
+                "sound_file": file_path,
+                "start_ms": start_ms,
+                "end_ms": end_ms,
+                "insert_ms": start_ms,
+                "volume": bg_volume,
+                "fade_in_ms": fade_in,
+                "fade_out_ms": fade_out,
+                "crossfade_ms": crossfade,
+                "track": "background",
+            })
+
+    return sorted(placements, key=lambda p: p["start_ms"])
