@@ -40,3 +40,14 @@ def test_merge_short_segments_merges_under_8s():
     merged = merge_short_segments(segments, min_duration_ms=8000)
     assert len(merged) == 1
     assert merged[0]["end_ms"] == 9000
+
+
+from unittest.mock import patch
+
+@patch("backend.detection.emotion_timeline._llm_emotion_timeline", return_value=[{"start_ms": 0, "end_ms": 5000, "mood": "ambient", "source": "llm"}])
+def test_build_emotion_timeline_uses_llm_when_sparse(mock_llm):
+    from backend.detection.emotion_timeline import build_emotion_timeline
+    from backend.detection.highlight_detector import Highlight
+    h = [Highlight(start_ms=0, end_ms=1000, peak_ms=500, score=0.9, emotion="funny")]
+    segs = build_emotion_timeline(h, duration_ms=30000, transcript_segments=None)
+    assert segs[0]["source"] == "llm"
