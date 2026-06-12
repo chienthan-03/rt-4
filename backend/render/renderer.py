@@ -15,19 +15,41 @@ def build_background_filter_parts(
     filter_parts: list[str] = []
     bg_labels: list[str] = []
 
-    for i, p in enumerate(bg_placements):
+    # Make a copy of placements to avoid side effects
+    placements = [p.copy() for p in bg_placements]
+
+    # Pre-process placements for crossfades
+    for i in range(len(placements)):
+        p = placements[i]
+        p_fade_in = p.get("fade_in_ms", 500)
+        p_fade_out = p.get("fade_out_ms", 1000)
+        p_crossfade = p.get("crossfade_ms", 0)
+
+        if p_crossfade > 0 and i > 0:
+            p["start_ms"] = max(0, p["start_ms"] - p_crossfade)
+            p["fade_in_ms"] = p_crossfade
+            placements[i - 1]["fade_out_ms"] = p_crossfade
+        else:
+            p["fade_in_ms"] = p_fade_in
+            if "fade_out_ms" not in p:
+                p["fade_out_ms"] = p_fade_out
+
+    for i, p in enumerate(placements):
         idx = start_input_idx + i
         inputs.extend(["-stream_loop", "-1", "-i", p["sound_file"]])
 
         start_s = p["start_ms"] / 1000.0
         end_s = p["end_ms"] / 1000.0
         seg_dur = max(0.1, end_s - start_s)
-        fade_out_offset = max(0.1, min(seg_dur - 1.0, seg_dur - 0.1))
+        
+        fade_in_s = p["fade_in_ms"] / 1000.0
+        fade_out_s = p["fade_out_ms"] / 1000.0
+        fade_out_offset = max(0.0, seg_dur - fade_out_s)
 
         filter_parts.append(
             f"[{idx}:a]atrim=start=0:end={seg_dur:.3f},asetpts=PTS-STARTPTS,"
-            f"afade=t=in:st=0:d=0.5,"
-            f"afade=t=out:st={fade_out_offset:.3f}:d=1.0,"
+            f"afade=t=in:st=0:d={fade_in_s:.3f},"
+            f"afade=t=out:st={fade_out_offset:.3f}:d={fade_out_s:.3f},"
             f"adelay={p['start_ms']}|{p['start_ms']},"
             f"apad=whole_dur={total_duration_s:.3f}[bg{i}]"
         )
@@ -41,6 +63,7 @@ def build_background_filter_parts(
             f"{''.join(bg_labels)}amix=inputs={n}:normalize=0,volume={bg_volume}[bgall]"
         )
     return inputs, filter_parts, "[bgall]"
+
 
 
 def _build_sfx_bus(sfx_placements: list[dict], original_duration_s: float) -> tuple[list[str], list[str], str | None]:
@@ -79,6 +102,12 @@ def _build_sfx_bus(sfx_placements: list[dict], original_duration_s: float) -> tu
     return inputs, filter_parts, "[sfxall]"
 
 
+BG_DUCK_THRESHOLD = 0.018
+BG_DUCK_RATIO = 3
+BG_DUCK_ATTACK = 50
+BG_DUCK_RELEASE = 800
+
+
 def build_ffmpeg_filter(
     sfx_placements: list[dict],
     original_duration_s: float,
@@ -100,39 +129,37 @@ def build_ffmpeg_filter(
     )
 
     all_filters = sfx_filters + bg_filters
-    bus_labels = [label for label in (sfx_label, bg_label) if label]
 
-    if not bus_labels:
+    if not sfx_label and not bg_label:
         return "[0:a]anull[aout]", []
 
-    if len(bus_labels) == 1 and sfx_label:
-        if len(sfx_placements) == 1:
-            return (
-                f"{';'.join(all_filters)};"
-                f"[0:a][sfxall]amix=inputs=2:duration=first:dropout_transition=0:"
-                f"normalize=0:weights=1 1,volume=2[aout]",
-                sfx_inputs,
+    filter_complex_parts = list(all_filters)
+
+    if bg_label:
+        # We have background. We always apply sidechain compression from original audio.
+        filter_complex_parts.append("[0:a]asplit=2[aorig][asc]")
+        filter_complex_parts.append(
+            f"[{bg_label.strip('[]')}][asc]sidechaincompress=threshold={BG_DUCK_THRESHOLD}:"
+            f"ratio={BG_DUCK_RATIO}:attack={BG_DUCK_ATTACK}:release={BG_DUCK_RELEASE}[bgducked]"
+        )
+        if sfx_label:
+            filter_complex_parts.append(
+                f"[aorig][{sfx_label.strip('[]')}][bgducked]amix=inputs=3:duration=first:"
+                f"dropout_transition=0:normalize=0:weights=1 1 1,volume=3[aout]"
             )
-        return (
-            f"{';'.join(all_filters)};"
-            f"[0:a][sfxall]amix=inputs=2:duration=first:dropout_transition=0:"
-            f"normalize=0:weights=1 1,volume=2[aout]",
-            sfx_inputs,
+        else:
+            filter_complex_parts.append(
+                f"[aorig][bgducked]amix=inputs=2:duration=first:dropout_transition=0:"
+                f"normalize=0:weights=1 1,volume=2[aout]"
+            )
+    else:
+        # We only have SFX.
+        filter_complex_parts.append(
+            f"[0:a][{sfx_label.strip('[]')}]amix=inputs=2:duration=first:dropout_transition=0:"
+            f"normalize=0:weights=1 1,volume=2[aout]"
         )
 
-    if len(bus_labels) == 1 and bg_label:
-        return (
-            f"{';'.join(all_filters)};"
-            f"[0:a][bgall]amix=inputs=2:duration=first:dropout_transition=0:"
-            f"normalize=0:weights=1 1,volume=2[aout]",
-            bg_inputs,
-        )
-
-    mix = (
-        f"{';'.join(all_filters)};"
-        f"[0:a][sfxall][bgall]amix=inputs=3:duration=first:dropout_transition=0:"
-        f"normalize=0:weights=1 1 1,volume=3[aout]"
-    )
+    mix = ";".join(filter_complex_parts)
     return mix, sfx_inputs + bg_inputs
 
 
