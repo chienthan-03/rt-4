@@ -72,6 +72,7 @@ async def test_upload_defaults_volumes(mock_process_video, client, sample_video_
     assert args[2] == 0.5
     assert args[4] == 0.35
     assert args[5] == 0.15
+    assert args[6] is True
 
 
 @pytest.mark.anyio
@@ -135,3 +136,22 @@ async def test_upload_accepts_zero_volume(mock_process_video, client, sample_vid
 
     assert response.status_code == 200
     assert mock_process_video.delay.call_args[0][2] == 0.0
+
+
+@pytest.mark.anyio
+@patch("backend.main.process_video")
+async def test_upload_passes_enable_background(mock_process_video, client, sample_video_path):
+    mock_task = MagicMock()
+    mock_task.id = "task-bg"
+    mock_process_video.delay.return_value = mock_task
+
+    with open(sample_video_path, "rb") as video_file:
+        response = await client.post(
+            "/upload",
+            files={"file": ("test.mp4", video_file, "video/mp4")},
+            data={"enable_background": "false"},
+        )
+
+    assert response.status_code == 200
+    kwargs = mock_process_video.delay.call_args
+    assert kwargs[0][6] is False or kwargs[1].get("enable_background") is False

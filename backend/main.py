@@ -25,6 +25,7 @@ async def upload_video(
     bg_volume: float = Form(0.15),
     meme_volume: float | None = Form(None),
     niche: str = Form(DEFAULT_NICHE),
+    enable_background: bool = Form(True),
 ):
     resolved_major = major_volume if major_volume is not None else (meme_volume if meme_volume is not None else 0.5)
 
@@ -61,6 +62,7 @@ async def upload_video(
         niche,
         minor_volume,
         bg_volume,
+        enable_background,
     )
     return {"job_id": job_id, "task_id": task.id, "niche": niche}
 
